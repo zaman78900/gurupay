@@ -6,16 +6,27 @@ import Login from './Login'
 export default function Root() {
 const [user, setUser] = useState(null)
 const [loading, setLoading] = useState(true)
-useEffect(() => {supabase.auth.getSession().then(({ data: { session } }) => {
-setUser(session?.user ?? null)
-setLoading(false)
-})
-const { data: { subscription } } = supabase.auth.onAuthStateChange(
-(_event, session) => setUser(session?.user ?? null)
-)
-return () => subscription.unsubscribe()
+const [error, setError] = useState(null)
+useEffect(() => {
+  (async () => {
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) throw sessionError
+      setUser(session?.user ?? null)
+    } catch (e) {
+      console.error('Auth error:', e)
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  })()
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    (_event, session) => setUser(session?.user ?? null)
+  )
+  return () => subscription.unsubscribe()
 }, [])
-if (loading) return <div>Loading...</div>
+if (error) return <div style={{ padding: '2rem', color: 'red' }}>Error: {error}</div>
+if (loading) return <div style={{ padding: '2rem' }}>Loading...</div>
 if (!user) return <Login />
 return <GuruPayPro userId={user.id} /> // show app when logged in
 }
