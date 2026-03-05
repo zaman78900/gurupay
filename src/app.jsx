@@ -94,7 +94,7 @@ const SEED_PROFILE = {
 };
 
 // Default feature settings
-const DEFAULT_FEATURES = { showStudents: true, showAttendance: true, showPayments: true, showReports: true, enableNotifications: true, enableDarkMode: true };
+const DEFAULT_FEATURES = { showStudents: true, showAttendance: true, showPayments: true, showReports: true, enableNotifications: true, enableDarkMode: true, enableWaiveFee: true, enableGST: true };
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 const KEYS = { batches: "gp2_b", students: "gp2_s", payments: "gp2_p", profile: "gp2_pr", theme: "gp2_th", features: "gp2_feat" };
@@ -1366,6 +1366,8 @@ function SettingsTab({ profile, setProfile, features, setFeatures, theme, setThe
             ["showPayments", "💳 Payments", "Show fee tracking"],
             ["showReports", "📊 Reports", "Show analytics"],
             ["enableNotifications", "🔔 Notifications", "Get alerts"],
+            ["enableWaiveFee", "🔵 Waive Fee", "Allow fee waivers"],
+            ["enableGST", "💰 GST", "Enable GST calculation"],
           ].map(([key, label, desc]) => (
             <div key={key} className="settings-item">
               <div>
