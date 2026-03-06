@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { I } from '../App';
+import { I } from '../app';
 import { fmtINR, getInitials } from '../utils';
 import AuthModal from './AuthModal';
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '../supabase';
-import { I } from '../App';
+import { I } from '../app';
 
 const AuthModal = ({ isOpen, onClose, initialView = 'sign_in' }) => {
   const [currentView, setCurrentView] = useState(initialView);
