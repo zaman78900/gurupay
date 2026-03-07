@@ -150,21 +150,39 @@ const CSS = `
   /* Mobile sidebar styles */
   .sidebar-overlay { display: none; }
   @media (max-width: 768px) {
-    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-100%); box-shadow: var(--shadow-lg); border-right: none; border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
-    .sidebar.mobile-open { transform: translateX(0); }
-    .sidebar-overlay { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); opacity: 0; pointer-events: none; z-index: 40; transition: opacity 0.2s ease-out; }
-    .sidebar-overlay.mobile-open { opacity: 1; pointer-events: all; backdrop-filter: blur(2px); }
+    .sidebar { display: none; }
+    .sidebar-overlay { display: none; }
   }
 
   /* Hamburger button */
   .hamburger-btn { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 8px; background: none; border: none; color: var(--text); }
   .hamburger-btn span { width: 22px; height: 2px; background: currentColor; border-radius: 1px; transition: var(--transition); }
-  @media (max-width: 768px) { .hamburger-btn { display: flex; position: relative; z-index: 60; } }
+  @media (max-width: 768px) { .hamburger-btn { display: none; } }
 
   /* Hamburger animation */
   .hamburger-btn.is-active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
   .hamburger-btn.is-active span:nth-child(2) { opacity: 0; }
   .hamburger-btn.is-active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  
+  /* Bottom Navigation Bar */
+  .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 65px; background: var(--bg2);
+    border-top: 1px solid var(--border); box-shadow: 0 -2px 6px rgba(0,0,0,.06); z-index: 999;
+    display: flex; align-items: stretch; justify-content: space-around; padding: 0; }
+  .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; border: none; background: none; color: var(--text3); cursor: pointer;
+    font-family: var(--font-body); font-size: 10px; font-weight: 600; transition: var(--transition);
+    position: relative; padding: 6px 4px; }
+  .bottom-nav-item:hover { background: var(--bg3); color: var(--text); }
+  .bottom-nav-item.active { color: var(--accent); background: var(--accent-light); }
+  .bottom-nav-item .nav-icon { width: 18px; height: 18px; opacity: .8; }
+  .bottom-nav-item.active .nav-icon { opacity: 1; }
+  .bottom-nav-item span { display: block; text-align: center; line-height: 1.1; }
+  
+  @media (max-width: 768px) {
+    .bottom-nav { display: flex; }
+    .content { padding-bottom: 80px; }
+  }
+
   
    .sidebar-logo { padding: 22px 20px 16px; border-bottom: 1px solid var(--border); }
   .logo-icon { font-size: 28px; display: block; }
@@ -415,6 +433,14 @@ const CSS = `
     .nav-btn { justify-content: center; padding: 10px; }
     .avatar { margin: 0 auto; }
     .profile-card { justify-content: center; }
+  }
+  
+  @media (max-width: 768px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    .content { padding: 16px; padding-bottom: 80px; }
+    .topbar { padding: 0 16px; }
   }
 
   /* Batch color strip */
@@ -1644,6 +1670,21 @@ function GuruPayPro({ user }) {
             {tab === "reports" && <ReportsTab batches={batches} students={students} payments={payments} />}
             {tab === "settings" && <Settings profile={profile} setProfile={setProfile} features={features} setFeatures={setFeatures} theme={theme} setTheme={setTheme} toast={toast} user={user} />}
           </div>
+
+          {/* Bottom Navigation for Mobile */}
+          <nav className="bottom-nav">
+            {NAV.map(([id, label, icon, badge]) => (
+              <button
+                key={id}
+                className={`bottom-nav-item ${tab === id ? "active" : ""}`}
+                onClick={() => setTab(id)}
+              >
+                {icon}
+                <span>{label.split(" ")[0]}</span>
+                {badge > 0 && <span style={{ position: "absolute", top: 4, right: 4, background: "var(--red)", color: "white", fontSize: 8, fontWeight: 700, padding: "1px 3px", borderRadius: "100px", minWidth: 14, textAlign: "center" }}>{badge}</span>}
+              </button>
+            ))}
+          </nav>
         </div>
       </div>
     </>
