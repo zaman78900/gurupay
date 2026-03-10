@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from './supabase'
 import Login from './Login'
-import Settings from './components/Settings';
+import GuruPaySettings from './pages/Settings';
 // Wrap your whole app with this auth check:
 export default function Root() {
 const [user, setUser] = useState(null)
