@@ -1,37 +1,4 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
-
-:root {
-  --primary: #1B8A5A;
-  --primary-dark: #146B47;
-  --primary-light: #22A96E;
-  --accent: #F59E0B;
-  --danger: #EF4444;
-  --warning: #F97316;
-  --success: #10B981;
-  --surface: #FFFFFF;
-  --surface-2: #F8FAFC;
-  --surface-3: #F1F5F9;
-  --border: #E2E8F0;
-  --text: #0F172A;
-  --text-2: #475569;
-  --text-3: #94A3B8;
-}
-
-[data-theme="dark"] {
-  --surface: #0F172A;
-  --surface-2: #1E293B;
-  --surface-3: #334155;
-  --border: #334155;
-  --text: #F1F5F9;
-  --text-2: #94A3B8;
-  --text-3: #475569;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Outfit', sans-serif; background: var(--surface-2); color: var(--text); }
-::-webkit-scrollbar { display: none; }
-
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;900&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -322,7 +289,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--surface-2); color: v
   /* Bottom Navigation Bar */
   .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 65px; background: var(--bg2);
     border-top: 1px solid var(--border); box-shadow: 0 -2px 6px rgba(0,0,0,.06); z-index: 999;
-    align-items: stretch; justify-content: space-around; padding: 0; }
+    display: flex; align-items: stretch; justify-content: space-around; padding: 0; }
   .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px; border: none; background: none; color: var(--text3); cursor: pointer;
     font-family: var(--font-body); font-size: 10px; font-weight: 600; transition: var(--transition);
