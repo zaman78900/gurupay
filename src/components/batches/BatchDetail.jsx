@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { I } from '../App';
-import { fmtINR, fmtDate, monthLabel, curMonth } from '../utils';
+import { I } from '../../App';
+import { fmtINR, fmtDate, monthLabel, curMonth } from '../../utils';
 
 const BatchDetails = ({ 
   batch, 
@@ -273,7 +273,6 @@ const BatchDetails = ({
                 ) : (
                   batchStudents.map(student => {
                     const payment = getPaymentStatus(student.id);
-                    const amount = payment ? payment.amount : batch.fee - (student.discount || 0) + Math.round((batch.fee - (student.discount || 0)) * batch.gstRate / 100);
                     
                     return (
                       <tr key={student.id}>
