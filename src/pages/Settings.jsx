@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 
 const Icon = ({ d, color = "currentColor", size = 18, stroke = 1.8 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -388,15 +388,33 @@ function BusinessPanel({ D, accentColor }) {
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────
-export default function GuruPaySettings({ embedded = false }) {
-  const [dark, setDark]       = useState(true);
+export default function GuruPaySettings({ embedded = false, theme: appTheme, setTheme: setAppTheme }) {
+  const isThemeControlledByApp = appTheme === "light" || appTheme === "dark";
+  const [localDark, setLocalDark] = useState(appTheme === "dark");
+
+  useEffect(() => {
+    if (isThemeControlledByApp) {
+      setLocalDark(appTheme === "dark");
+    }
+  }, [appTheme, isThemeControlledByApp]);
+
+  const dark = isThemeControlledByApp ? appTheme === "dark" : localDark;
+  const setDark = (next) => {
+    const resolved = typeof next === "function" ? next(dark) : next;
+    if (isThemeControlledByApp && typeof setAppTheme === "function") {
+      setAppTheme(resolved ? "dark" : "light");
+      return;
+    }
+    setLocalDark(resolved);
+  };
+
   const [sec, setSec]         = useState("business");
   const [nav, setNav]         = useState("settings");
 
   // ── Appearance state lifted here so it applies globally ──
-  const [theme, setTheme]     = useState("Default Green");
+  const [colorTheme, setColorTheme] = useState("Default Green");
   const [fontSize, setFontSize] = useState("Medium");
-  const accentColor = THEME_COLORS[theme];
+  const accentColor = THEME_COLORS[colorTheme];
   const baseFontSize = FONT_SIZE_MAP[fontSize];
 
   const D = {
@@ -414,7 +432,7 @@ export default function GuruPaySettings({ embedded = false }) {
     business:  <BusinessPanel D={D} accentColor={accentColor}/>,
     features:  <FeaturesPanel D={D} accentColor={accentColor}/>,
     appearance:<AppearancePanel dark={dark} setDark={setDark} D={D}
-                  theme={theme} setTheme={setTheme}
+                  theme={colorTheme} setTheme={setColorTheme}
                   fontSize={fontSize} setFontSize={setFontSize}
                   accentColor={accentColor}/>,
     auth:      <AuthPanel D={D} accentColor={accentColor}/>,
