@@ -183,6 +183,15 @@ const SEED_PROFILE = {
 const DEFAULT_FEATURES = { showStudents: true, showAttendance: true, showPayments: true, showReports: true, enableNotifications: true, enableDarkMode: true, enableWaiveFee: true, enableGST: true, enableWhatsApp: true };
 const DEFAULT_WHATSAPP_CONFIG = { mode: "default", customTemplate: "" };
 
+function normalizeWhatsAppConfig(config) {
+  const mode = config?.mode === "custom" ? "custom" : "default";
+  const customTemplate = typeof config?.customTemplate === "string"
+    ? config.customTemplate
+    : "";
+
+  return { mode, customTemplate };
+}
+
 // ─── Storage ──────────────────────────────────────────────────────────────────
 const KEYS = { batches: "gp2_b", students: "gp2_s", payments: "gp2_p", profile: "gp2_pr", theme: "gp2_th", features: "gp2_feat", whatsappConfig: "gp2_wa_cfg" };
 async function dbGet(k, fallback) {
@@ -203,6 +212,7 @@ function applyReminderTemplate(template, vars) {
 }
 
 function buildReminderMessage({ student, batch, month, amount, whatsappConfig }) {
+  const safeWhatsAppConfig = normalizeWhatsAppConfig(whatsappConfig);
   const baseNum = batch.fee - (student.discount || 0);
   const gstNum = Math.round(baseNum * batch.gstRate / 100);
   const totalNum = amount ?? (baseNum + gstNum);
@@ -211,7 +221,7 @@ function buildReminderMessage({ student, batch, month, amount, whatsappConfig })
   const total = totalNum.toLocaleString("en-IN");
   const monthText = monthLabel(month);
 
-  if (whatsappConfig?.mode !== "custom" || !whatsappConfig?.customTemplate?.trim()) {
+  if (safeWhatsAppConfig.mode !== "custom" || !safeWhatsAppConfig.customTemplate.trim()) {
     return buildDefaultReminderMessage({
       studentName: student.name,
       batchName: batch.name,
@@ -224,7 +234,7 @@ function buildReminderMessage({ student, batch, month, amount, whatsappConfig })
   }
 
   const gstLine = gstNum ? `\nGST (${batch.gstRate}%): ₹${gst}` : "";
-  return applyReminderTemplate(whatsappConfig.customTemplate, {
+  return applyReminderTemplate(safeWhatsAppConfig.customTemplate, {
     studentName: student.name,
     batchName: batch.name,
     month: monthText,
@@ -733,8 +743,9 @@ function ConfirmModal({ icon, title, msg, confirmLabel = "Confirm", danger, onCo
 
 // ─── WA Reminder Modal ────────────────────────────────────────────────────────
 function WaModal({ student, batch, month, whatsappConfig, onSaveWhatsAppConfig, onClose }) {
-  const [mode, setMode] = useState(whatsappConfig?.mode || "default");
-  const [customTemplate, setCustomTemplate] = useState(whatsappConfig?.customTemplate || DEFAULT_REMINDER_TEMPLATE);
+  const initialConfig = normalizeWhatsAppConfig(whatsappConfig);
+  const [mode, setMode] = useState(initialConfig.mode);
+  const [customTemplate, setCustomTemplate] = useState(initialConfig.customTemplate || DEFAULT_REMINDER_TEMPLATE);
   const msg = buildReminderMessage({
     student,
     batch,
@@ -1732,7 +1743,7 @@ function GuruPayPro({ user }) {
         status: st.status || "Active",
         ...st
       }));
-      setBatches(b); setStudents(normalizedStudents); setPayments(p); setProfile(pr); setTheme(th); setFeatures(feat); setWhatsappConfig(waCfg || DEFAULT_WHATSAPP_CONFIG);
+      setBatches(b); setStudents(normalizedStudents); setPayments(p); setProfile(pr); setTheme(th); setFeatures(feat); setWhatsappConfig(normalizeWhatsAppConfig(waCfg || DEFAULT_WHATSAPP_CONFIG));
       setLoading(false);
     })();
   }, []);
