@@ -286,14 +286,78 @@ function AuthPanel({ D, accentColor }) {
 
 function DataPanel({ D, accentColor }) {
   const [msg,setMsg]=useState("");
+  const STORAGE_KEYS = {
+    students: ["gp2_s", "gp_students"],
+    batches: ["gp2_b", "gp_batches"],
+  };
+
   const btns=[
-    {label:"Export CSV",  sub:"Download all student data",  color:"#3B9EFF"},
+    {label:"Export CSV",  sub:"Download all student data",  color:"#3B9EFF", action:"export"},
     {label:"Backup Data", sub:"Save to cloud storage",      color:accentColor},
     {label:"Import Data", sub:"Restore from backup file",   color:"#FF8C42"},
     {label:"Clear Cache", sub:"Free up app storage",        color:"#7C6FFF"},
   ];
 
-  const handleDataAction = (actionLabel) => {
+  const getStoredData = (possibleKeys = []) => {
+    for (const key of possibleKeys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // ignore bad localStorage values
+      }
+    }
+    return [];
+  };
+
+  const downloadStudentCsv = () => {
+    const students = getStoredData(STORAGE_KEYS.students);
+    const batches = getStoredData(STORAGE_KEYS.batches);
+
+    if (!students.length) {
+      setMsg("No student data found to export.");
+      setTimeout(() => setMsg(""), 2500);
+      return false;
+    }
+
+    const header = ["Name", "Phone", "Email", "Batch", "Status", "Joining Date"];
+    const rows = students.map((student) => {
+      const batch = batches.find((b) => b.id === student.batchId);
+      return [
+        student?.name || "",
+        student?.phone || "",
+        student?.email || "",
+        batch?.name || "",
+        student?.status || "",
+        student?.joiningDate || "",
+      ];
+    });
+
+    const csvContent = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const fileName = `gurupay_students_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.setAttribute("download", fileName);
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+
+    setMsg(`Export completed: ${fileName}`);
+    setTimeout(() => setMsg(""), 2500);
+    return true;
+  };
+
+  const handleDataAction = (actionItem) => {
+    const actionLabel = actionItem?.label || "Action";
     const confirmed = window.confirm(
       `Are you sure you want to ${actionLabel.toLowerCase()}?`
     );
@@ -301,6 +365,11 @@ function DataPanel({ D, accentColor }) {
     if (!confirmed) {
       setMsg(`${actionLabel} cancelled.`);
       setTimeout(() => setMsg(""), 2000);
+      return;
+    }
+
+    if (actionItem?.action === "export") {
+      downloadStudentCsv();
       return;
     }
 
@@ -314,7 +383,7 @@ function DataPanel({ D, accentColor }) {
         <p style={{ fontSize:12,color:accentColor,fontWeight:600 }}>Last backup: Today, 9:00 AM</p>
       </div>
       {btns.map(b=>(
-        <div key={b.label} onClick={()=>handleDataAction(b.label)}
+        <div key={b.label} onClick={()=>handleDataAction(b)}
           style={{ display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderRadius:12,cursor:"pointer",background:D.elevated,border:`1px solid ${D.border}` }}>
           <div style={{ width:36,height:36,borderRadius:9,flexShrink:0,background:`${b.color}22`,display:"flex",alignItems:"center",justifyContent:"center" }}>
             <div style={{ width:10,height:10,borderRadius:3,background:b.color }}/>
