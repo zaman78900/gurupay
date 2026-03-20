@@ -180,15 +180,62 @@ const SEED_PROFILE = {
 };
 
 // Default feature settings
-const DEFAULT_FEATURES = { showStudents: true, showAttendance: true, showPayments: true, showReports: true, enableNotifications: true, enableDarkMode: true, enableWaiveFee: true, enableGST: true };
+const DEFAULT_FEATURES = { showStudents: true, showAttendance: true, showPayments: true, showReports: true, enableNotifications: true, enableDarkMode: true, enableWaiveFee: true, enableGST: true, enableWhatsApp: true };
+const DEFAULT_WHATSAPP_CONFIG = { mode: "default", customTemplate: "" };
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
-const KEYS = { batches: "gp2_b", students: "gp2_s", payments: "gp2_p", profile: "gp2_pr", theme: "gp2_th", features: "gp2_feat" };
+const KEYS = { batches: "gp2_b", students: "gp2_s", payments: "gp2_p", profile: "gp2_pr", theme: "gp2_th", features: "gp2_feat", whatsappConfig: "gp2_wa_cfg" };
 async function dbGet(k, fallback) {
   try { const val = localStorage.getItem(k); return val ? JSON.parse(val) : fallback; }
   catch { return fallback; }
 }
 async function dbSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+const DEFAULT_REMINDER_TEMPLATE = `Namaste {{studentName}} ji! 🙏\n\nYour *{{batchName}}* fee for *{{month}}* is pending.\n\nFee: ₹{{base}}{{gstLine}}\n*Total Due: ₹{{total}}*\n\nKindly pay at your earliest convenience.\n\nThank you! 🎓`;
+
+function buildDefaultReminderMessage({ studentName, batchName, month, base, gst, gstRate, total }) {
+  const gstLine = gst ? `\nGST (${gstRate}%): ₹${gst}` : "";
+  return `Namaste ${studentName} ji! 🙏\n\nYour *${batchName}* fee for *${month}* is pending.\n\nFee: ₹${base}${gstLine}\n*Total Due: ₹${total}*\n\nKindly pay at your earliest convenience.\n\nThank you! 🎓`;
+}
+
+function applyReminderTemplate(template, vars) {
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => (vars[key] ?? "").toString());
+}
+
+function buildReminderMessage({ student, batch, month, amount, whatsappConfig }) {
+  const baseNum = batch.fee - (student.discount || 0);
+  const gstNum = Math.round(baseNum * batch.gstRate / 100);
+  const totalNum = amount ?? (baseNum + gstNum);
+  const base = baseNum.toLocaleString("en-IN");
+  const gst = gstNum.toLocaleString("en-IN");
+  const total = totalNum.toLocaleString("en-IN");
+  const monthText = monthLabel(month);
+
+  if (whatsappConfig?.mode !== "custom" || !whatsappConfig?.customTemplate?.trim()) {
+    return buildDefaultReminderMessage({
+      studentName: student.name,
+      batchName: batch.name,
+      month: monthText,
+      base,
+      gst,
+      gstRate: batch.gstRate,
+      total,
+    });
+  }
+
+  const gstLine = gstNum ? `\nGST (${batch.gstRate}%): ₹${gst}` : "";
+  return applyReminderTemplate(whatsappConfig.customTemplate, {
+    studentName: student.name,
+    batchName: batch.name,
+    month: monthText,
+    base,
+    gst,
+    gstRate: batch.gstRate,
+    total,
+    amount: total,
+    gstLine,
+  });
+}
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const CSS = `
@@ -685,11 +732,26 @@ function ConfirmModal({ icon, title, msg, confirmLabel = "Confirm", danger, onCo
 }
 
 // ─── WA Reminder Modal ────────────────────────────────────────────────────────
-function WaModal({ student, batch, month, onClose }) {
-  const base = batch.fee - (student.discount || 0);
-  const gst = Math.round(base * batch.gstRate / 100);
-  const total = base + gst;
-  const msg = `Namaste ${student.name} ji! 🙏\n\nYour *${batch.name}* fee for *${monthLabel(month)}* is pending.\n\nFee: ₹${base.toLocaleString("en-IN")}${gst ? `\nGST (${batch.gstRate}%): ₹${gst.toLocaleString("en-IN")}` : ""}\n*Total Due: ₹${total.toLocaleString("en-IN")}*\n\nKindly pay at your earliest convenience.\n\nThank you! 🎓`;
+function WaModal({ student, batch, month, whatsappConfig, onSaveWhatsAppConfig, onClose }) {
+  const [mode, setMode] = useState(whatsappConfig?.mode || "default");
+  const [customTemplate, setCustomTemplate] = useState(whatsappConfig?.customTemplate || DEFAULT_REMINDER_TEMPLATE);
+  const msg = buildReminderMessage({
+    student,
+    batch,
+    month,
+    whatsappConfig: {
+      mode,
+      customTemplate,
+    },
+  });
+
+  const saveTemplatePreference = () => {
+    onSaveWhatsAppConfig?.({
+      mode,
+      customTemplate,
+    });
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-backdrop" onClick={onClose} />
@@ -699,7 +761,34 @@ function WaModal({ student, batch, month, onClose }) {
           <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}><I.X /></button>
         </div>
         <div className="modal-body">
+          <div style={{ marginBottom: 12 }}>
+            <div className="input-label" style={{ marginBottom: 8 }}>Message Option</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className={`btn btn-sm ${mode === "default" ? "btn-primary" : "btn-secondary"}`} onClick={() => setMode("default")}>
+                Use Default
+              </button>
+              <button className={`btn btn-sm ${mode === "custom" ? "btn-primary" : "btn-secondary"}`} onClick={() => setMode("custom")}>
+                Customize
+              </button>
+            </div>
+          </div>
+
+          {mode === "custom" && (
+            <div className="input-group">
+              <label className="input-label">Custom WhatsApp Message</label>
+              <textarea
+                className="input"
+                value={customTemplate}
+                onChange={(e) => setCustomTemplate(e.target.value)}
+                style={{ minHeight: 120 }}
+                placeholder={DEFAULT_REMINDER_TEMPLATE}
+              />
+              <div className="input-hint">Use: {{studentName}}, {{batchName}}, {{month}}, {{base}}, {{gst}}, {{gstRate}}, {{total}}, {{amount}}, {{gstLine}}</div>
+            </div>
+          )}
+
           <div style={{ background: "var(--bg3)", borderRadius: "var(--radius)", padding: "14px 16px", fontSize: 13, lineHeight: 1.75, whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)", marginBottom: 14, color: "var(--text2)" }}>{msg}</div>
+          <button className="btn btn-secondary" style={{ width: "100%", marginBottom: 10 }} onClick={saveTemplatePreference}>Save Message Setting</button>
           <a href={`https://wa.me/91${student.phone}?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer" className="btn btn-wa btn-lg" style={{ width: "100%", textDecoration: "none" }}>
             <I.WA /> Open in WhatsApp
           </a>
@@ -1572,7 +1661,7 @@ function GenerateFeesModal({ batches, students, payments, setPayments, selectedM
 }
 
 // ─── BULK REMINDER MODAL ──────────────────────────────────────────────────────
-function BulkReminderModal({ unpaid, students, batches, selectedMonth, onClose }) {
+function BulkReminderModal({ unpaid, students, batches, selectedMonth, whatsappConfig, onClose }) {
   const getStudent = id => students.find(s => s.id === id);
   const getBatch = id => batches.find(b => b.id === id);
   return (
@@ -1588,7 +1677,13 @@ function BulkReminderModal({ unpaid, students, batches, selectedMonth, onClose }
             {unpaid.map(p => {
               const s = getStudent(p.studentId); const b = s && getBatch(s.batchId);
               if (!s || !b) return null;
-              const msg = `Namaste ${s.name} ji! 🙏\n\nYour *${b.name}* fee for *${monthLabel(selectedMonth)}* is due.\n\n*Amount: ₹${p.amount.toLocaleString("en-IN")}*\n\nPlease pay at your earliest. Thank you! 🎓`;
+              const msg = buildReminderMessage({
+                student: s,
+                batch: b,
+                month: selectedMonth,
+                amount: p.amount,
+                whatsappConfig,
+              });
               return (
                 <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "var(--bg3)", borderRadius: "var(--radius-sm)" }}>
                   <div><div style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</div><div style={{ fontSize: 11, color: "var(--text4)" }}>{b.name} · {fmtINR(p.amount)}</div></div>
@@ -1616,6 +1711,7 @@ function GuruPayPro({ user }) {
   const [modal, setModal] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [features, setFeatures] = useState(DEFAULT_FEATURES);
+  const [whatsappConfig, setWhatsappConfig] = useState(DEFAULT_WHATSAPP_CONFIG);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const { toasts, push: toast, dismiss } = useToast();
 
@@ -1624,10 +1720,11 @@ function GuruPayPro({ user }) {
 
   useEffect(() => {
     (async () => {
-      const [b, s, p, pr, th, feat] = await Promise.all([
+      const [b, s, p, pr, th, feat, waCfg] = await Promise.all([
         dbGet(KEYS.batches, SEED_BATCHES), dbGet(KEYS.students, SEED_STUDENTS),
         dbGet(KEYS.payments, SEED_PAYMENTS), dbGet(KEYS.profile, SEED_PROFILE), dbGet(KEYS.theme, "light"),
         dbGet(KEYS.features, DEFAULT_FEATURES),
+        dbGet(KEYS.whatsappConfig, DEFAULT_WHATSAPP_CONFIG),
       ]);
       // ensure new fields exist on loaded students
       const normalizedStudents = (s || []).map(st => ({
@@ -1635,7 +1732,7 @@ function GuruPayPro({ user }) {
         status: st.status || "Active",
         ...st
       }));
-      setBatches(b); setStudents(normalizedStudents); setPayments(p); setProfile(pr); setTheme(th); setFeatures(feat);
+      setBatches(b); setStudents(normalizedStudents); setPayments(p); setProfile(pr); setTheme(th); setFeatures(feat); setWhatsappConfig(waCfg || DEFAULT_WHATSAPP_CONFIG);
       setLoading(false);
     })();
   }, []);
@@ -1652,6 +1749,10 @@ function GuruPayPro({ user }) {
   useEffect(() => {
     dbSet(KEYS.features, features);
   }, [features]);
+
+  useEffect(() => {
+    dbSet(KEYS.whatsappConfig, whatsappConfig);
+  }, [whatsappConfig]);
 
   useEffect(() => {
     if (
@@ -1765,7 +1866,7 @@ function GuruPayPro({ user }) {
       <style>{CSS}</style>
 
       {/* Modals */}
-      {modal?.type === "wa" && <WaModal student={modal.data.student} batch={modal.data.batch} month={selectedMonth} onClose={closeModal} />}
+      {modal?.type === "wa" && <WaModal student={modal.data.student} batch={modal.data.batch} month={selectedMonth} whatsappConfig={whatsappConfig} onSaveWhatsAppConfig={setWhatsappConfig} onClose={closeModal} />}
       {modal?.type === "receipt" && <ReceiptModal {...modal.data} profile={profile} onClose={closeModal} />}
       {modal?.type === "studentHistory" && <StudentHistoryModal student={modal.data} batches={batches} payments={payments} onClose={closeModal} />}
       {modal?.type === "addStudent" && <StudentModal batches={batches} defaultBatchId={modal.data?.batchId} onSave={saveStudent} onClose={closeModal} />}
@@ -1774,7 +1875,7 @@ function GuruPayPro({ user }) {
       {modal?.type === "editBatch" && <BatchModal batch={modal.data} onSave={saveBatch} onClose={closeModal} />}
       {modal?.type === "confirm" && <ConfirmModal {...modal.data} onClose={closeModal} />}
       {modal?.type === "generateFees" && <GenerateFeesModal batches={batches} students={students} payments={payments} setPayments={setPayments} selectedMonth={selectedMonth} toast={toast} onClose={closeModal} />}
-      {modal?.type === "bulkReminder" && <BulkReminderModal unpaid={modal.data} students={students} batches={batches} selectedMonth={selectedMonth} onClose={closeModal} />}
+      {modal?.type === "bulkReminder" && <BulkReminderModal unpaid={modal.data} students={students} batches={batches} selectedMonth={selectedMonth} whatsappConfig={whatsappConfig} onClose={closeModal} />}
       {modal?.type === "markPaid" && <MarkPaidModal {...modal.data} onSave={(opts) => handleMarkPaid(modal.data.payment || { id: uid(), studentId: modal.data.student.id, month: selectedMonth, status: "unpaid" }, opts)} onClose={closeModal} />}
       {modal?.type === "waive" && <WaiveModal student={modal.data.student} batch={modal.data.batch} onSave={async (reason) => {
         const p = modal.data.payment || payments.find(pm => pm.studentId === modal.data.student.id && pm.month === selectedMonth);
