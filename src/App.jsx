@@ -1587,6 +1587,24 @@ function GuruPayPro({ user }) {
     dbSet(KEYS.theme, theme);
   }, [theme]);
 
+  useEffect(() => {
+    dbSet(KEYS.profile, profile);
+  }, [profile]);
+
+  useEffect(() => {
+    dbSet(KEYS.features, features);
+  }, [features]);
+
+  useEffect(() => {
+    if (
+      (tab === "fees" && !features.showPayments) ||
+      (tab === "batches" && !features.showStudents) ||
+      (tab === "reports" && !features.showReports)
+    ) {
+      setTab("dashboard");
+    }
+  }, [features, tab]);
+
   const closeModal = () => setModal(null);
 
   const openModal = useCallback((type, data) => setModal({ type, data }), []);

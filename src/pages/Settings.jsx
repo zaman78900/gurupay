@@ -64,22 +64,33 @@ function Toggle({ on, onToggle, accentColor = "#10a34a" }) {
 }
 
 // ── Panels ───────────────────────────────────────────────────────────
-function FeaturesPanel({ D, accentColor }) {
-  const [features, setFeatures] = useState({
-    "Late Fee Tracking":    true,
-    "WhatsApp Reminders":   true,
-    "CSV Export":           false,
-    "Attendance Tracking":  true,   // ← replaced Revenue Analytics
-    "Bulk Operations":      false,
-    "Dark Mode Default":    false,
-  });
+function FeaturesPanel({ D, accentColor, features = {}, setFeatures }) {
+  const featureRows = [
+    ["showPayments", "Fee Tracking", "Show/hide fee tracking modules"],
+    ["showStudents", "Batches & Students", "Enable batch and student screens"],
+    ["showReports", "Reports", "Enable reports and analytics pages"],
+    ["showAttendance", "Attendance Tracking", "Use attendance related flows"],
+    ["enableNotifications", "Notifications", "Enable alerts and reminders"],
+    ["enableDarkMode", "Theme Toggle", "Allow switching dark/light mode"],
+    ["enableWaiveFee", "Waive Fee", "Allow fee waive operations"],
+    ["enableGST", "GST", "Apply GST logic in fee calculations"],
+  ];
+
+  const onToggleFeature = (key) => {
+    if (typeof setFeatures !== "function") return;
+    setFeatures((prev) => ({ ...prev, [key]: !prev?.[key] }));
+  };
+
   return (
     <div>
-      {Object.entries(features).map(([k,v],i,a)=>(
-        <div key={k} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",
+      {featureRows.map(([key, label, sub], i, a) => (
+        <div key={key} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",
           padding:"13px 0", borderBottom:i<a.length-1?`1px solid ${D.border}`:"none" }}>
-          <p style={{ fontSize:14,fontWeight:500,color:D.textPri }}>{k}</p>
-          <Toggle on={v} accentColor={accentColor} onToggle={()=>setFeatures(p=>({...p,[k]:!p[k]}))} />
+          <div>
+            <p style={{ fontSize:14,fontWeight:500,color:D.textPri }}>{label}</p>
+            <p style={{ fontSize:11,color:D.textSec,marginTop:2 }}>{sub}</p>
+          </div>
+          <Toggle on={!!features?.[key]} accentColor={accentColor} onToggle={() => onToggleFeature(key)} />
         </div>
       ))}
     </div>
@@ -143,6 +154,7 @@ function AuthPanel({ D, accentColor }) {
   const [savedPin, setSavedPin] = useState(["","","","",""]);
   const [pinStatus, setPinStatus] = useState(""); // "saved" | "reset" | ""
   const [bio, setBio]       = useState(true);
+  const [twoFA, setTwoFA]   = useState(false);
   const [lock, setLock]     = useState("5 min");
   const pinRefs = useRef([]);
 
@@ -228,7 +240,7 @@ function AuthPanel({ D, accentColor }) {
 
       {/* Biometric / 2FA */}
       {[["Biometric Login","Use fingerprint",bio,()=>setBio(v=>!v)],
-        ["Two-Factor Auth","SMS verification",false,()=>{}]
+        ["Two-Factor Auth","SMS verification",twoFA,()=>setTwoFA(v=>!v)]
       ].map(([l,s,on,fn])=>(
         <div key={l} style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
           <div>
@@ -324,12 +336,45 @@ function AboutPanel({ D }) {
   );
 }
 
-function BusinessPanel({ D, accentColor }) {
+function BusinessPanel({ D, accentColor, profile, setProfile }) {
   const [edit,setEdit]=useState(false);
   const [saved,setSaved]=useState(false);
-  const [p,setP]=useState({ businessName:"Sri Balaji Coaching Academy",gstin:"29ABCDE1234F1Z5",
-    address:"12, MG Road, Bengaluru – 560001",phone:"9876543210",email:"balaji@coaching.in",upiId:"balaji@okaxis" });
-  const save=()=>{setSaved(true);setEdit(false);setTimeout(()=>setSaved(false),2500);};
+  const [p,setP]=useState({
+    businessName: profile?.name || "",
+    gstin: profile?.gstin || "",
+    address: profile?.address || "",
+    phone: profile?.phone || "",
+    email: profile?.email || "",
+    upiId: profile?.upiId || "",
+  });
+
+  useEffect(() => {
+    setP({
+      businessName: profile?.name || "",
+      gstin: profile?.gstin || "",
+      address: profile?.address || "",
+      phone: profile?.phone || "",
+      email: profile?.email || "",
+      upiId: profile?.upiId || "",
+    });
+  }, [profile]);
+
+  const save=()=>{
+    if (typeof setProfile === "function") {
+      setProfile((prev) => ({
+        ...(prev || {}),
+        name: p.businessName,
+        gstin: p.gstin,
+        address: p.address,
+        phone: p.phone,
+        email: p.email,
+        upiId: p.upiId,
+      }));
+    }
+    setSaved(true);
+    setEdit(false);
+    setTimeout(()=>setSaved(false),2500);
+  };
   const inp=(mono=false)=>({ width:"100%",padding:"11px 13px",
     background:edit?(D.isDark?"#252847":"#fff"):D.elevated,
     border:`1.5px solid ${edit?accentColor:D.border}`,
@@ -388,7 +433,15 @@ function BusinessPanel({ D, accentColor }) {
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────
-export default function GuruPaySettings({ embedded = false, theme: appTheme, setTheme: setAppTheme }) {
+export default function GuruPaySettings({
+  embedded = false,
+  theme: appTheme,
+  setTheme: setAppTheme,
+  profile,
+  setProfile,
+  features,
+  setFeatures,
+}) {
   const isThemeControlledByApp = appTheme === "light" || appTheme === "dark";
   const [localDark, setLocalDark] = useState(appTheme === "dark");
 
@@ -429,8 +482,8 @@ export default function GuruPaySettings({ embedded = false, theme: appTheme, set
   };
 
   const PANELS = {
-    business:  <BusinessPanel D={D} accentColor={accentColor}/>,
-    features:  <FeaturesPanel D={D} accentColor={accentColor}/>,
+    business:  <BusinessPanel D={D} accentColor={accentColor} profile={profile} setProfile={setProfile}/>,
+    features:  <FeaturesPanel D={D} accentColor={accentColor} features={features} setFeatures={setFeatures}/>,
     appearance:<AppearancePanel dark={dark} setDark={setDark} D={D}
                   theme={colorTheme} setTheme={setColorTheme}
                   fontSize={fontSize} setFontSize={setFontSize}
@@ -439,8 +492,6 @@ export default function GuruPaySettings({ embedded = false, theme: appTheme, set
     data:      <DataPanel D={D} accentColor={accentColor}/>,
     about:     <AboutPanel D={D}/>,
   };
-
-  const activeSec = SECTIONS.find(s=>s.id===sec);
 
   return (
     <>
@@ -547,46 +598,35 @@ export default function GuruPaySettings({ embedded = false, theme: appTheme, set
               {SECTIONS.map((s,i)=>{
                 const active=sec===s.id;
                 return (
-                  <div key={s.id} className="sec-row" onClick={()=>setSec(s.id)} style={{
-                    display:"flex",alignItems:"center",gap:12,padding:"11px 13px",
-                    background:active?(dark?"rgba(255,255,255,0.025)":"rgba(16,163,74,0.04)"):"transparent",
-                    borderLeft:`3px solid ${active?s.color:"transparent"}`,
-                    borderBottom:i<SECTIONS.length-1?`1px solid ${D.border}`:"none" }}>
-                    <div style={{ width:34,height:34,borderRadius:9,flexShrink:0,background:s.bg,
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      boxShadow:active?`0 3px 10px ${s.color}44`:"none",transition:"box-shadow 0.2s" }}>
-                      <Icon d={ICONS[s.id]} color={s.color} size={15} stroke={1.8}/>
+                  <div key={s.id} style={{ borderBottom:i<SECTIONS.length-1?`1px solid ${D.border}`:"none" }}>
+                    <div className="sec-row" onClick={()=>setSec(prev => prev === s.id ? "" : s.id)} style={{
+                      display:"flex",alignItems:"center",gap:12,padding:"11px 13px",
+                      background:active?(dark?"rgba(255,255,255,0.025)":"rgba(16,163,74,0.04)"):"transparent",
+                      borderLeft:`3px solid ${active?s.color:"transparent"}` }}>
+                      <div style={{ width:34,height:34,borderRadius:9,flexShrink:0,background:s.bg,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        boxShadow:active?`0 3px 10px ${s.color}44`:"none",transition:"box-shadow 0.2s" }}>
+                        <Icon d={ICONS[s.id]} color={s.color} size={15} stroke={1.8}/>
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <p style={{ fontSize:13,fontWeight:active?700:500,
+                          color:active?s.color:D.textPri,transition:"color 0.15s" }}>{s.label}</p>
+                        <p style={{ fontSize:11,color:D.textSec,marginTop:1 }}>{s.sub}</p>
+                      </div>
+                      <div style={{ transform: active ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                        <Icon d={ICONS.chevron} color={active?s.color:D.textMuted} size={13}/>
+                      </div>
                     </div>
-                    <div style={{ flex:1 }}>
-                      <p style={{ fontSize:13,fontWeight:active?700:500,
-                        color:active?s.color:D.textPri,transition:"color 0.15s" }}>{s.label}</p>
-                      <p style={{ fontSize:11,color:D.textSec,marginTop:1 }}>{s.sub}</p>
-                    </div>
-                    <Icon d={ICONS.chevron} color={active?s.color:D.textMuted} size={13}/>
+                    {active && (
+                      <div style={{ background:D.surface,padding:"0 13px 14px 13px" }}>
+                        <div style={{ borderTop:`1px solid ${D.border}`,paddingTop:14 }}>
+                          {PANELS[s.id]}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Active panel */}
-          <div className="a3" key={sec} style={{ marginBottom:16 }}>
-            <div style={{ background:D.surface,borderRadius:18,border:`1px solid ${D.border}`,
-              padding:"16px 14px",
-              boxShadow:dark?"0 4px 20px rgba(0,0,0,0.3)":"0 2px 14px rgba(0,0,0,0.06)" }}>
-              {/* Panel header */}
-              <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:16,
-                paddingBottom:13,borderBottom:`1px solid ${D.border}` }}>
-                <div style={{ width:32,height:32,borderRadius:8,background:activeSec.bg,
-                  display:"flex",alignItems:"center",justifyContent:"center" }}>
-                  <Icon d={ICONS[sec]} color={activeSec.color} size={14}/>
-                </div>
-                <div>
-                  <p style={{ fontSize:14,fontWeight:700,color:D.textPri }}>{activeSec.label}</p>
-                  <p style={{ fontSize:11,color:D.textSec }}>{activeSec.sub}</p>
-                </div>
-              </div>
-              {PANELS[sec]}
             </div>
           </div>
 
