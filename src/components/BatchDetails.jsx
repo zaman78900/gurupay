@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { I } from '../App';
+import { I } from '../app';
 import { fmtINR, fmtDate, monthLabel, curMonth } from '../utils';
 
 const BatchDetails = ({ 
@@ -385,7 +385,7 @@ const BatchDetails = ({
                                   onClick={() => onSendInvoice(student, payment)}
                                   title="Send Invoice via WhatsApp"
                                 >
-                                  📄 Send Invoice via WhatsApp
+                                  📄 Send Invoice
                                 </button>
                                 <button
                                   className="btn btn-danger btn-sm"
@@ -523,7 +523,7 @@ const BatchDetails = ({
                           className="btn btn-primary btn-sm"
                           onClick={() => onSendInvoice(student, payment)}
                         >
-                          📄 Send Invoice via WhatsApp
+                          📄 Send Invoice
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
