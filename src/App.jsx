@@ -834,17 +834,130 @@ function WaModal({ student, batch, month, whatsappConfig, onSaveWhatsAppConfig, 
 }
 
 // ─── Receipt Modal ─────────────────────────────────────────────────────────────
+function escapePdfText(value) {
+  return String(value ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+}
+
+function buildSimplePdfFromLines(lines) {
+  const encoder = new TextEncoder();
+  const safeLines = (lines || []).map((line) => escapePdfText(line));
+
+  const contentStream = [
+    "BT",
+    "/F1 12 Tf",
+    "50 800 Td",
+    ...safeLines.flatMap((line) => [`(${line}) Tj`, "0 -18 Td"]),
+    "ET",
+  ].join("\n");
+
+  const streamBytesLength = encoder.encode(contentStream).length;
+  const objects = [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+    `5 0 obj\n<< /Length ${streamBytesLength} >>\nstream\n${contentStream}\nendstream\nendobj\n`,
+  ];
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+
+  objects.forEach((obj) => {
+    offsets.push(encoder.encode(pdf).length);
+    pdf += obj;
+  });
+
+  const xrefStart = encoder.encode(pdf).length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += "0000000000 65535 f \n";
+  for (let i = 1; i <= objects.length; i++) {
+    pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+  }
+
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return new Blob([pdf], { type: "application/pdf" });
+}
+
 function ReceiptModal({ student, batch, payment, profile, onClose }) {
   const base = batch.fee - (student.discount || 0);
   const gst = Math.round(base * batch.gstRate / 100);
   const late = payment.lateFee || 0;
   const total = base + gst + late;
+
+  const invoiceNo = `GP-${payment.id.toUpperCase()}`;
+  const invoiceDate = fmtDate(payment.paidOn || today());
+  const invoiceMonth = monthLabel(payment.month);
+
+  const shareInvoiceToWhatsApp = async () => {
+    try {
+      const invoiceLines = [
+        "INVOICE",
+        "",
+        profile.name,
+        profile.address,
+        profile.gstin ? `GSTIN: ${profile.gstin}` : "",
+        "",
+        `Invoice No: ${invoiceNo}`,
+        `Date: ${invoiceDate}`,
+        `Student: ${student.name}`,
+        `Mobile: +91 ${student.phone}`,
+        `Batch: ${batch.name}`,
+        `Period: ${invoiceMonth}`,
+        "",
+        `Base Fee: INR ${base.toLocaleString("en-IN")}`,
+        student.discount > 0 ? `Discount: INR ${student.discount.toLocaleString("en-IN")}` : "",
+        gst > 0 ? `GST @ ${batch.gstRate}%: INR ${gst.toLocaleString("en-IN")}` : "",
+        late > 0 ? `Late Fee: INR ${late.toLocaleString("en-IN")}` : "",
+        `Total Paid: INR ${total.toLocaleString("en-IN")}`,
+      ].filter(Boolean);
+
+      const pdfBlob = buildSimplePdfFromLines(invoiceLines);
+      const fileName = `Invoice-${invoiceNo}.pdf`;
+      const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+      const message = `Invoice ${invoiceNo} for ${student.name} (${invoiceMonth}) - INR ${total.toLocaleString("en-IN")}.`;
+
+      const canShareFile =
+        typeof navigator !== "undefined" &&
+        typeof navigator.share === "function" &&
+        (typeof navigator.canShare !== "function" || navigator.canShare({ files: [pdfFile] }));
+
+      if (canShareFile) {
+        await navigator.share({
+          title: `Invoice ${invoiceNo}`,
+          text: message,
+          files: [pdfFile],
+        });
+        return;
+      }
+
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      const fallbackMessage = `${message}\n\nInvoice PDF downloaded. Please attach the PDF file in WhatsApp before sending.`;
+      const fallbackWaUrl = `https://wa.me/91${student.phone}?text=${encodeURIComponent(fallbackMessage)}`;
+      window.open(fallbackWaUrl, "_blank");
+    } catch (err) {
+      console.error("Failed to share invoice PDF:", err);
+      alert("Unable to create/share invoice PDF. Please try again.");
+    }
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-box" style={{ maxWidth: 440 }}>
         <div className="modal-header">
-          <div><div className="modal-title">GST Receipt</div></div>
+          <div><div className="modal-title">Invoice</div></div>
           <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}><I.X /></button>
         </div>
         <div className="modal-body">
@@ -856,7 +969,7 @@ function ReceiptModal({ student, batch, payment, profile, onClose }) {
             </div>
             <hr className="receipt-divider" />
             <div style={{ textAlign: "center", fontWeight: 700, fontSize: 13, marginBottom: 10, letterSpacing: 1 }}>TAX INVOICE</div>
-            {[["Receipt No", `GP-${payment.id.toUpperCase()}`], ["Date", fmtDate(payment.paidOn || today())], ["Student", student.name], ["Mobile", `+91 ${student.phone}`], ["Batch", batch.name], ["Period", monthLabel(payment.month)]].map(([k, v]) => (
+            {[["Invoice No", invoiceNo], ["Date", invoiceDate], ["Student", student.name], ["Mobile", `+91 ${student.phone}`], ["Batch", batch.name], ["Period", invoiceMonth]].map(([k, v]) => (
               <div className="receipt-row" key={k}><span style={{ color: "#666" }}>{k}</span><span style={{ fontWeight: 500 }}>{v}</span></div>
             ))}
             <hr className="receipt-divider" />
@@ -870,7 +983,7 @@ function ReceiptModal({ student, batch, payment, profile, onClose }) {
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => window.print()}>🖨 Print</button>
-            <a href={`https://wa.me/91${student.phone}?text=${encodeURIComponent(`Receipt for ${batch.name} - ${monthLabel(payment.month)}: ₹${total.toLocaleString("en-IN")} paid. Receipt No: GP-${payment.id.toUpperCase()}`)}`} target="_blank" rel="noreferrer" className="btn btn-wa" style={{ flex: 1, textDecoration: "none" }}><I.WA /> Share</a>
+            <button className="btn btn-wa" style={{ flex: 1 }} onClick={shareInvoiceToWhatsApp}><I.WA /> Share</button>
           </div>
         </div>
       </div>
@@ -1218,7 +1331,7 @@ function DashboardTab({ batches, students, payments, selectedMonth, setSelectedM
                         <td><span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ background: b.color }} className="dot" />{b.name}</span></td>
                         <td className="td-mono" style={{ color: "var(--accent)", fontWeight: 700 }}>{fmtINR(p.amount + (p.lateFee || 0))}</td>
                         <td style={{ fontSize: 12, color: "var(--text4)" }}>{fmtDate(p.paidOn)}</td>
-                        <td><button className="btn btn-secondary btn-sm" onClick={() => openModal("receipt", { student: s, batch: b, payment: p })}><I.Receipt /> Receipt</button></td>
+                        <td><button className="btn btn-secondary btn-sm" onClick={() => openModal("receipt", { student: s, batch: b, payment: p })}><I.Receipt /> Invoice</button></td>
                       </tr>
                     );
                   })}
