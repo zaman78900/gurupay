@@ -1552,7 +1552,7 @@ function FeesTab({ batches, students, payments, setPayments, selectedMonth, setS
 }
 
 // ─── BATCHES & STUDENTS TAB ───────────────────────────────────────────────────
-function BatchesTab({ batches, setBatches, students, setStudents, payments, setPayments, toast, openModal, selectedBatch, setSelectedBatch }) {
+function BatchesTab({ batches, setBatches, students, setStudents, payments, setPayments, toast, openModal, selectedBatch, setSelectedBatch, profile }) {
   const [search, setSearch] = useState("");
   const [batchFilter, setBatchFilter] = useState("");
 
@@ -1575,6 +1575,24 @@ function BatchesTab({ batches, setBatches, students, setStudents, payments, setP
     setStudents(ns); setPayments(np);
     await dbSet(KEYS.students, ns); await dbSet(KEYS.payments, np);
     toast("Student removed", { icon: "🗑️", onUndo: async () => { setStudents(prev.students); setPayments(prev.payments); await dbSet(KEYS.students, prev.students); await dbSet(KEYS.payments, prev.payments); } });
+  };
+
+  const handleRevertPayment = async (student, payment) => {
+    const np = payments.map(p => p.id === payment.id
+      ? { ...p, status: "unpaid", paidOn: null, paidAt: null, lateFee: 0, notes: "" }
+      : p);
+    setPayments(np);
+    await dbSet(KEYS.payments, np);
+    toast(`Payment reverted for ${student.name}`, { icon: "↩️" });
+  };
+
+  const handleRevertWaiver = async (student, payment) => {
+    const np = payments.map(p => p.id === payment.id
+      ? { ...p, status: "unpaid", paidOn: null, paidAt: null, notes: "" }
+      : p);
+    setPayments(np);
+    await dbSet(KEYS.payments, np);
+    toast(`Fee waiver removed for ${student.name}`, { icon: "↩️" });
   };
 
   const filteredStudents = students.filter(s =>
@@ -1605,6 +1623,9 @@ function BatchesTab({ batches, setBatches, students, setStudents, payments, setP
           onDeleteStudent={(s) => openModal("confirm", { icon: "🗑️", title: "Remove Student?", msg: `Remove ${s.name} from this batch?`, confirmLabel: "Remove", danger: true, onConfirm: () => deleteStudent(s) })}
           onMarkPaid={(s,p) => openModal("markPaid", { student: s, batch: selectedBatch, payment: p })}
           onWaiveFee={(s,p) => openModal("waive", { student: s, batch: selectedBatch, payment: p })}
+          onSendInvoice={(s,p) => openModal("receipt", { student: s, batch: selectedBatch, payment: p })}
+          onRevertPayment={handleRevertPayment}
+          onRevertWaiver={handleRevertWaiver}
           onSendReminder={(s) => openModal("wa", { student: s, batch: selectedBatch })}
           toast={toast}
         />
@@ -2039,7 +2060,7 @@ function GuruPayPro({ user }) {
   const handleMarkPaid = async (payment, { paidOn, lateFee, notes, amount }) => {
     const prev = [...payments];
     const np = payments.map(p => p.id === payment.id
-      ? { ...p, status: "paid", paidOn, lateFee, notes, amount }
+      ? { ...p, status: "paid", paidOn, paidAt: new Date().toISOString(), lateFee, notes, amount }
       : p);
     setPayments(np); await dbSet(KEYS.payments, np);
     toast("Fee marked as paid!", { icon: "✅", onUndo: async () => { setPayments(prev); await dbSet(KEYS.payments, prev); } });
@@ -2090,7 +2111,7 @@ function GuruPayPro({ user }) {
       {modal?.type === "markPaid" && <MarkPaidModal {...modal.data} onSave={(opts) => handleMarkPaid(modal.data.payment || { id: uid(), studentId: modal.data.student.id, month: selectedMonth, status: "unpaid" }, opts)} onClose={closeModal} />}
       {modal?.type === "waive" && <WaiveModal student={modal.data.student} batch={modal.data.batch} onSave={async (reason) => {
         const p = modal.data.payment || payments.find(pm => pm.studentId === modal.data.student.id && pm.month === selectedMonth);
-        if (p) { const np = payments.map(pm => pm.id === p.id ? { ...pm, status: "waived", notes: reason } : pm); setPayments(np); await dbSet(KEYS.payments, np); toast("Fee waived!", { icon: "🔵" }); }
+        if (p) { const np = payments.map(pm => pm.id === p.id ? { ...pm, status: "waived", notes: reason, paidAt: pm.paidAt || new Date().toISOString() } : pm); setPayments(np); await dbSet(KEYS.payments, np); toast("Fee waived!", { icon: "🔵" }); }
       }} onClose={closeModal} />}
 
       <ToastStack toasts={toasts} dismiss={dismiss} />
@@ -2160,7 +2181,7 @@ function GuruPayPro({ user }) {
           <div className="content">
             {tab === "dashboard" && <DashboardTab {...commonProps} />}
             {tab === "fees" && <FeesTab {...commonProps} setPayments={setPayments} deleteStudent={deleteStudent} />}
-            {tab === "batches" && <BatchesTab batches={batches} setBatches={setBatches} students={students} setStudents={setStudents} payments={payments} setPayments={setPayments} toast={toast} openModal={openModal} selectedBatch={selectedBatch} setSelectedBatch={setSelectedBatch} />}
+            {tab === "batches" && <BatchesTab batches={batches} setBatches={setBatches} students={students} setStudents={setStudents} payments={payments} setPayments={setPayments} toast={toast} openModal={openModal} selectedBatch={selectedBatch} setSelectedBatch={setSelectedBatch} profile={profile} />}
             {tab === "reports" && <ReportsTab batches={batches} students={students} payments={payments} />}
             {tab === "settings" && <GuruPaySettings embedded={true} profile={profile} setProfile={setProfile} features={features} setFeatures={setFeatures} theme={theme} setTheme={setTheme} uiSettings={uiSettings} setUiSettings={setUiSettings} batches={batches} students={students} payments={payments} toast={toast} user={user} />}
           </div>

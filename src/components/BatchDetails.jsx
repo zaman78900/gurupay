@@ -13,6 +13,9 @@ const BatchDetails = ({
   onDeleteStudent, 
   onMarkPaid, 
   onWaiveFee, 
+  onSendInvoice,
+  onRevertPayment,
+  onRevertWaiver,
   onSendReminder, 
   toast 
 }) => {
@@ -21,6 +24,7 @@ const BatchDetails = ({
   const [sortOrder, setSortOrder] = useState('asc');
   const [selectedMonth, setSelectedMonth] = useState(curMonth);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+  const [revertModal, setRevertModal] = useState(null);
 
   const batchStudents = useMemo(() => {
     return students
@@ -73,6 +77,22 @@ const BatchDetails = ({
       case 'unpaid': return 'badge-unpaid';
       default: return '';
     }
+  };
+
+  const formatPaymentTimestamp = (payment) => {
+    const ts = payment?.paidAt || payment?.paidOn || payment?.date || payment?.timestamp;
+    if (!ts) return null;
+    const date = new Date(ts);
+    if (Number.isNaN(date.getTime())) return null;
+    const text = date.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return text.replace('am', 'AM').replace('pm', 'PM');
   };
 
   const calculateBatchStats = () => {
@@ -304,15 +324,22 @@ const BatchDetails = ({
                         <td>{student.status || 'Active'}</td>
                         <td>
                           {payment ? (
-                            <span 
-                              className={`badge ${getStatusBadge(payment.status)}`}
-                              style={{ color: getStatusColor(payment.status) }}
-                            >
-                              {payment.status === 'paid' ? '✓ Paid' : 
-                               payment.status === 'waived' ? '🔵 Waived' : 
-                               '⏳ Unpaid'}
-                              {payment.lateFee > 0 && ` (+₹${payment.lateFee})`}
-                            </span>
+                            <div>
+                              <span 
+                                className={`badge ${getStatusBadge(payment.status)}`}
+                                style={{ color: getStatusColor(payment.status) }}
+                              >
+                                {payment.status === 'paid' ? '✓ Paid' : 
+                                 payment.status === 'waived' ? '🔵 Waived' : 
+                                 '⏳ Unpaid'}
+                                {payment.lateFee > 0 && ` (+₹${payment.lateFee})`}
+                              </span>
+                              {(payment.status === 'paid' || payment.status === 'waived') && formatPaymentTimestamp(payment) && (
+                                <div style={{ fontSize: '11px', color: 'var(--text4)', marginTop: '6px' }}>
+                                  🕐 Paid on {formatPaymentTimestamp(payment)}
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <span style={{ fontSize: '12px', color: 'var(--text4)' }}>Not Generated</span>
                           )}
@@ -326,16 +353,15 @@ const BatchDetails = ({
                             >
                               <I.Edit />
                             </button>
-                            <button 
-                              className="btn btn-wa btn-sm" 
-                              onClick={() => onSendReminder(student)}
-                              disabled={!payment || payment.status === 'paid'}
-                              title="Send WhatsApp Reminder"
-                            >
-                              <I.WA />
-                            </button>
                             {(!payment || payment.status === 'unpaid') && (
                               <>
+                                <button 
+                                  className="btn btn-wa btn-sm" 
+                                  onClick={() => onSendReminder(student)}
+                                  title="Send WhatsApp Reminder"
+                                >
+                                  <I.WA />
+                                </button>
                                 <button 
                                   className="btn btn-primary btn-sm" 
                                   onClick={() => onMarkPaid(student, payment)}
@@ -351,6 +377,33 @@ const BatchDetails = ({
                                   <I.Waive />
                                 </button>
                               </>
+                            )}
+                            {payment?.status === 'paid' && (
+                              <>
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => onSendInvoice(student, payment)}
+                                  title="Send Invoice via WhatsApp"
+                                >
+                                  📄 Send Invoice via WhatsApp
+                                </button>
+                                <button
+                                  className="btn btn-danger btn-sm"
+                                  onClick={() => setRevertModal({ type: 'payment', student, payment })}
+                                  title="Revert Payment"
+                                >
+                                  ↩️ Revert Payment
+                                </button>
+                              </>
+                            )}
+                            {payment?.status === 'waived' && (
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => setRevertModal({ type: 'waiver', student, payment })}
+                                title="Revert Waiver"
+                              >
+                                ↩️ Revert Waiver
+                              </button>
                             )}
                             <button 
                               className="btn btn-danger btn-sm" 
@@ -424,11 +477,18 @@ const BatchDetails = ({
 
                   <div style={{ marginBottom: '12px' }}>
                     {payment ? (
-                      <span className={`badge ${getStatusBadge(payment.status)}`}>
-                        {payment.status === 'paid' ? '✓ Paid' : 
-                         payment.status === 'waived' ? '🔵 Waived' : 
-                         '⏳ Unpaid'}
-                      </span>
+                      <div>
+                        <span className={`badge ${getStatusBadge(payment.status)}`}>
+                          {payment.status === 'paid' ? '✓ Paid' : 
+                           payment.status === 'waived' ? '🔵 Waived' : 
+                           '⏳ Unpaid'}
+                        </span>
+                        {(payment.status === 'paid' || payment.status === 'waived') && formatPaymentTimestamp(payment) && (
+                          <div style={{ fontSize: '11px', color: 'var(--text4)', marginTop: '6px' }}>
+                            🕐 Paid on {formatPaymentTimestamp(payment)}
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <span style={{ fontSize: '12px', color: 'var(--text4)' }}>Not Generated</span>
                     )}
@@ -456,12 +516,29 @@ const BatchDetails = ({
                           <I.Waive /> Waive
                         </button>
                       </>
-                    ) : (
-                      <button 
-                        className="btn btn-secondary btn-sm" 
-                        onClick={() => onSendReminder(student)}
+                    ) : null}
+                    {payment?.status === 'paid' && (
+                      <>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => onSendInvoice(student, payment)}
+                        >
+                          📄 Send Invoice via WhatsApp
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => setRevertModal({ type: 'payment', student, payment })}
+                        >
+                          ↩️ Revert Payment
+                        </button>
+                      </>
+                    )}
+                    {payment?.status === 'waived' && (
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => setRevertModal({ type: 'waiver', student, payment })}
                       >
-                        <I.WA /> Send Message
+                        ↩️ Revert Waiver
                       </button>
                     )}
                   </div>
@@ -471,6 +548,40 @@ const BatchDetails = ({
           </div>
         )}
       </div>
+
+      {revertModal && (
+        <div className="modal-overlay">
+          <div className="modal-backdrop" onClick={() => setRevertModal(null)} />
+          <div className="modal-box confirm-box" style={{ animation: 'slideUp .2s cubic-bezier(.34,1.56,.64,1)' }}>
+            <div className="modal-body" style={{ textAlign: 'center', padding: '28px 24px 20px' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
+                {revertModal.type === 'payment' ? 'Revert Payment?' : 'Revert Waiver?'}
+              </div>
+              <div className="confirm-msg">
+                {revertModal.type === 'payment'
+                  ? `This will mark ${revertModal.student.name}'s payment as Unpaid. The payment record will be cleared.`
+                  : `This will mark ${revertModal.student.name}'s payment as Unpaid. The payment record will be cleared.`}
+              </div>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'center', gap: 10 }}>
+              <button className="btn btn-secondary" onClick={() => setRevertModal(null)}>Cancel</button>
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  if (revertModal.type === 'payment') {
+                    onRevertPayment(revertModal.student, revertModal.payment);
+                  } else {
+                    onRevertWaiver(revertModal.student, revertModal.payment);
+                  }
+                  setRevertModal(null);
+                }}
+              >
+                Yes, Revert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
