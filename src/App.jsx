@@ -192,6 +192,7 @@ const UI_THEME_PALETTE = {
 };
 
 const UI_FONT_SIZE = { Small: "12px", Medium: "14px", Large: "16px" };
+const UI_FONT_SCALE = { Small: 0.92, Medium: 1, Large: 1.08 };
 
 function normalizeWhatsAppConfig(config) {
   const mode = config?.mode === "custom" ? "custom" : "default";
@@ -279,6 +280,8 @@ const CSS = `
     --font-display: 'Fraunces', serif;
     --font-body: 'Outfit', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --global-font-size: 14px;
+    --global-scale: 1;
     --sidebar-w: 256px;
     --transition: all 0.18s cubic-bezier(.4,0,.2,1);
   }
@@ -292,8 +295,8 @@ const CSS = `
     --shadow-lg: 0 10px 25px rgba(0,0,0,.5); --shadow-xl: 0 20px 40px rgba(0,0,0,.6);
   }
 
-  html, body, #root { height: 100%; font-family: var(--font-body); background: var(--bg); color: var(--text); }
-  .app { display: flex; height: 100vh; overflow: hidden; }
+  html, body, #root { height: 100%; font-family: var(--font-body); background: var(--bg); color: var(--text); font-size: var(--global-font-size); }
+  .app { display: flex; height: 100vh; overflow: hidden; zoom: var(--global-scale); }
 
   /* Sidebar */
   .sidebar { width: var(--sidebar-w); background: var(--bg2); border-right: 1px solid var(--border);
@@ -1785,12 +1788,14 @@ function GuruPayPro({ user }) {
   useEffect(() => {
     const palette = UI_THEME_PALETTE[uiSettings?.colorTheme] || UI_THEME_PALETTE[DEFAULT_UI_SETTINGS.colorTheme];
     const baseFont = UI_FONT_SIZE[uiSettings?.fontSize] || UI_FONT_SIZE[DEFAULT_UI_SETTINGS.fontSize];
+    const scale = UI_FONT_SCALE[uiSettings?.fontSize] || UI_FONT_SCALE[DEFAULT_UI_SETTINGS.fontSize];
     const root = document.documentElement;
 
     root.style.setProperty("--accent", palette.accent);
     root.style.setProperty("--accent-dark", palette.accentDark);
     root.style.setProperty("--accent-light", palette.accentLight);
     root.style.setProperty("--global-font-size", baseFont);
+    root.style.setProperty("--global-scale", String(scale));
   }, [uiSettings]);
 
   useEffect(() => {
