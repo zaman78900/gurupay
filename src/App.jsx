@@ -5,6 +5,12 @@ import Login from './Login'
 import GuruPaySettings from './pages/Settings';
 import BatchDetails from './components/BatchDetails';
 import html2canvas from "html2canvas";
+import { 
+  fetchBatches, createBatch, updateBatch, deleteBatch,
+  fetchStudents, createStudent, updateStudent, deleteStudent,
+  fetchPayments, createPayment, updatePayment, deletePayment,
+  fetchProfile, saveProfile, fetchSettings, saveSettings
+} from './lib/database';
 
 const VERSION_CHECK_INTERVAL_MS = 60 * 1000;
 const VERSION_STORAGE_KEY = "gp_app_build_id";
@@ -1433,9 +1439,16 @@ function FeesTab({ batches, students, payments, setPayments, selectedMonth, setS
 
   const handleWaive = async (payment, reason) => {
     const _prev = [...payments];
-    const np = payments.map(p => p.id === payment.id ? { ...p, status: "waived", notes: reason } : p);
+    const waivedPayment = { ...payment, status: "waived", notes: reason, paidAt: payment.paidAt || new Date().toISOString() };
+    const np = payments.map(p => p.id === payment.id ? waivedPayment : p);
     setPayments(np);
     await dbSet(KEYS.payments, np);
+    
+    // Also update in Supabase if user is logged in
+    if (user?.id) {
+      await updatePayment(user.id, waivedPayment).catch(console.error);
+    }
+    
     toast("Fee waived successfully", { icon: "🔵" });
   };
 
@@ -1552,7 +1565,7 @@ function FeesTab({ batches, students, payments, setPayments, selectedMonth, setS
 }
 
 // ─── BATCHES & STUDENTS TAB ───────────────────────────────────────────────────
-function BatchesTab({ batches, setBatches, students, setStudents, payments, setPayments, toast, openModal, selectedBatch, setSelectedBatch, profile }) {
+function BatchesTab({ user, batches, setBatches, students, setStudents, payments, setPayments, toast, openModal, selectedBatch, setSelectedBatch, profile }) {
   const [search, setSearch] = useState("");
   const [batchFilter, setBatchFilter] = useState("");
 
@@ -1562,6 +1575,12 @@ function BatchesTab({ batches, setBatches, students, setStudents, payments, setP
     const prev = [...batches];
     const nb = batches.filter(b => b.id !== batch.id);
     setBatches(nb); await dbSet(KEYS.batches, nb);
+    
+    // Also delete from Supabase if user is logged in
+    if (user?.id) {
+      await deleteBatch(user.id, batch.id).catch(console.error);
+    }
+    
     if (selectedBatch && selectedBatch.id === batch.id) {
       setSelectedBatch(null);
     }
@@ -1574,24 +1593,43 @@ function BatchesTab({ batches, setBatches, students, setStudents, payments, setP
     const np = payments.filter(p => p.studentId !== student.id);
     setStudents(ns); setPayments(np);
     await dbSet(KEYS.students, ns); await dbSet(KEYS.payments, np);
+    
+    // Also delete from Supabase if user is logged in
+    if (user?.id) {
+      await deleteStudent(user.id, student.id).catch(console.error);
+      for (const p of prev.payments.filter(p => p.studentId === student.id)) {
+        await deletePayment(user.id, p.id).catch(console.error);
+      }
+    }
+    
     toast("Student removed", { icon: "🗑️", onUndo: async () => { setStudents(prev.students); setPayments(prev.payments); await dbSet(KEYS.students, prev.students); await dbSet(KEYS.payments, prev.payments); } });
   };
 
   const handleRevertPayment = async (student, payment) => {
-    const np = payments.map(p => p.id === payment.id
-      ? { ...p, status: "unpaid", paidOn: null, paidAt: null, lateFee: 0, notes: "" }
-      : p);
+    const revertedPayment = { ...payment, status: "unpaid", paidOn: null, paidAt: null, lateFee: 0, notes: "" };
+    const np = payments.map(p => p.id === payment.id ? revertedPayment : p);
     setPayments(np);
     await dbSet(KEYS.payments, np);
+    
+    // Also update in Supabase if user is logged in
+    if (user?.id) {
+      await updatePayment(user.id, revertedPayment).catch(console.error);
+    }
+    
     toast(`Payment reverted for ${student.name}`, { icon: "↩️" });
   };
 
   const handleRevertWaiver = async (student, payment) => {
-    const np = payments.map(p => p.id === payment.id
-      ? { ...p, status: "unpaid", paidOn: null, paidAt: null, notes: "" }
-      : p);
+    const waivedPayment = { ...payment, status: "unpaid", paidOn: null, paidAt: null, notes: "" };
+    const np = payments.map(p => p.id === payment.id ? waivedPayment : p);
     setPayments(np);
     await dbSet(KEYS.payments, np);
+    
+    // Also update in Supabase if user is logged in
+    if (user?.id) {
+      await updatePayment(user.id, waivedPayment).catch(console.error);
+    }
+    
     toast(`Fee waiver removed for ${student.name}`, { icon: "↩️" });
   };
 
@@ -1834,7 +1872,7 @@ function ReportsTab({ batches, students, payments }) {
 
 
 // ─── GENERATE FEES MODAL ──────────────────────────────────────────────────────
-function GenerateFeesModal({ batches, students, payments, setPayments, selectedMonth, toast, onClose }) {
+function GenerateFeesModal({ user, batches, students, payments, setPayments, selectedMonth, toast, onClose }) {
   const existing = payments.filter(p => p.month === selectedMonth).map(p => p.studentId);
   const toGenerate = students.filter(s => !existing.includes(s.id));
   const doGenerate = async () => {
@@ -1849,6 +1887,14 @@ function GenerateFeesModal({ batches, students, payments, setPayments, selectedM
       }
     });
     setPayments(newPayments); await dbSet(KEYS.payments, newPayments);
+    
+    // Also save new payments to Supabase if user is logged in
+    if (user?.id) {
+      for (const p of newPayments.slice(payments.length)) {
+        await createPayment(user.id, p).catch(console.error);
+      }
+    }
+    
     toast(`Generated ${toGenerate.length} fee records for ${monthLabel(selectedMonth)}!`, { icon: "⚡" });
     onClose();
   };
@@ -1933,13 +1979,72 @@ function GuruPayPro({ user }) {
 
   useEffect(() => {
     (async () => {
-      const [b, s, p, pr, th, feat, waCfg, uiCfg] = await Promise.all([
-        dbGet(KEYS.batches, SEED_BATCHES), dbGet(KEYS.students, SEED_STUDENTS),
-        dbGet(KEYS.payments, SEED_PAYMENTS), dbGet(KEYS.profile, SEED_PROFILE), dbGet(KEYS.theme, "light"),
-        dbGet(KEYS.features, DEFAULT_FEATURES),
-        dbGet(KEYS.whatsappConfig, DEFAULT_WHATSAPP_CONFIG),
-        dbGet(KEYS.uiSettings, DEFAULT_UI_SETTINGS),
-      ]);
+      const userId = user?.id;
+      
+      // Try to fetch from Supabase first
+      let supabaseBatches = [], supabaseStudents = [], supabasePayments = [], supabaseProfile = null, supabaseSettings = null;
+      
+      if (userId) {
+        supabaseBatches = await fetchBatches(userId);
+        supabaseStudents = await fetchStudents(userId);
+        supabasePayments = await fetchPayments(userId);
+        supabaseProfile = await fetchProfile(userId);
+        supabaseSettings = await fetchSettings(userId);
+      }
+      
+      // If Supabase has data, use it; otherwise fall back to localStorage or seed data
+      const hasSupabaseData = supabaseBatches.length > 0 || supabaseStudents.length > 0 || supabasePayments.length > 0;
+      
+      let b, s, p, pr, th, feat, waCfg, uiCfg;
+      
+      if (hasSupabaseData && userId) {
+        // Use Supabase data
+        b = supabaseBatches;
+        s = supabaseStudents;
+        p = supabasePayments;
+        pr = supabaseProfile || SEED_PROFILE;
+        th = "light";
+        feat = supabaseSettings ? {
+          showPayments: supabaseSettings.enable_gst !== false,
+          showStudents: true,
+          showReports: true,
+          showAttendance: false,
+          enableNotifications: true,
+          enableDarkMode: true,
+          enableWaiveFee: true,
+          enableGST: supabaseSettings.enable_gst !== false,
+          enableWhatsApp: supabaseSettings.enable_whatsapp !== false,
+        } : DEFAULT_FEATURES;
+        waCfg = DEFAULT_WHATSAPP_CONFIG;
+        uiCfg = DEFAULT_UI_SETTINGS;
+      } else {
+        // Fall back to localStorage or seed data
+        [b, s, p, pr, th, feat, waCfg, uiCfg] = await Promise.all([
+          dbGet(KEYS.batches, SEED_BATCHES), dbGet(KEYS.students, SEED_STUDENTS),
+          dbGet(KEYS.payments, SEED_PAYMENTS), dbGet(KEYS.profile, SEED_PROFILE), dbGet(KEYS.theme, "light"),
+          dbGet(KEYS.features, DEFAULT_FEATURES),
+          dbGet(KEYS.whatsappConfig, DEFAULT_WHATSAPP_CONFIG),
+          dbGet(KEYS.uiSettings, DEFAULT_UI_SETTINGS),
+        ]);
+        
+        // If user is logged in and we have seed data, migrate to Supabase
+        if (userId && (b.length > 0 || s.length > 0 || p.length > 0)) {
+          // Save existing data to Supabase
+          for (const batch of b) {
+            await createBatch(userId, batch);
+          }
+          for (const student of s) {
+            await createStudent(userId, student);
+          }
+          for (const payment of p) {
+            await createPayment(userId, payment);
+          }
+          if (pr) {
+            await saveProfile(userId, pr);
+          }
+        }
+      }
+      
       // ensure new fields exist on loaded students
       const normalizedStudents = (s || []).map(st => ({
         rollNumber: st.rollNumber || "",
@@ -1950,7 +2055,7 @@ function GuruPayPro({ user }) {
       setUiSettings({ ...DEFAULT_UI_SETTINGS, ...(uiCfg || {}) });
       setLoading(false);
     })();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -1959,11 +2064,26 @@ function GuruPayPro({ user }) {
 
   useEffect(() => {
     dbSet(KEYS.profile, profile);
-  }, [profile]);
+    // Also save to Supabase if user is logged in
+    if (user?.id && profile) {
+      saveProfile(user.id, profile).catch(console.error);
+    }
+  }, [profile, user?.id]);
 
   useEffect(() => {
     dbSet(KEYS.features, features);
-  }, [features]);
+    // Also save to Supabase if user is logged in
+    if (user?.id) {
+      saveSettings(user.id, {
+        enable_gst: features.enableGST,
+        enable_discounts: features.enableGST,
+        enable_late_fees: features.enableGST,
+        enable_whatsapp: features.enableWhatsApp,
+        csv_export: features.showReports,
+        compact_mode: features.compactMode,
+      }).catch(console.error);
+    }
+  }, [features, user?.id]);
 
   useEffect(() => {
     dbSet(KEYS.whatsappConfig, whatsappConfig);
@@ -2006,6 +2126,16 @@ function GuruPayPro({ user }) {
       ? batches.map(x => x.id === b.id ? b : x)
       : [...batches, b];
     setBatches(nb); await dbSet(KEYS.batches, nb);
+    
+    // Also save to Supabase if user is logged in
+    if (user?.id) {
+      if (batches.find(x => x.id === b.id)) {
+        await updateBatch(user.id, b).catch(console.error);
+      } else {
+        await createBatch(user.id, b).catch(console.error);
+      }
+    }
+    
     toast(batches.find(x => x.id === b.id) ? "Batch updated!" : "Batch created!", { icon: "✅" });
   };
 
@@ -2014,13 +2144,29 @@ function GuruPayPro({ user }) {
     const isEdit = students.find(x => x.id === s.id);
     const ns = isEdit ? students.map(x => x.id === s.id ? s : x) : [...students, s];
     setStudents(ns); await dbSet(KEYS.students, ns);
+    
+    // Also save to Supabase if user is logged in
+    if (user?.id) {
+      if (isEdit) {
+        await updateStudent(user.id, s).catch(console.error);
+      } else {
+        await createStudent(user.id, s).catch(console.error);
+      }
+    }
+    
     if (!isEdit) {
       const b = batches.find(b => b.id === s.batchId);
       if (b) {
         const base = b.fee - (s.discount || 0);
         const total = base + Math.round(base * b.gstRate / 100);
-        const np = [...payments, { id: uid(), studentId: s.id, month: curMonth, status: "unpaid", amount: total, lateFee: 0, notes: "" }];
+        const newPayment = { id: uid(), studentId: s.id, month: curMonth, status: "unpaid", amount: total, lateFee: 0, notes: "" };
+        const np = [...payments, newPayment];
         setPayments(np); await dbSet(KEYS.payments, np);
+        
+        // Also save payment to Supabase if user is logged in
+        if (user?.id) {
+          await createPayment(user.id, newPayment).catch(console.error);
+        }
       }
     } else {
       // update all UNPAID payment amounts for this student
@@ -2030,6 +2176,15 @@ function GuruPayPro({ user }) {
         const newAmt = base + Math.round(base * b.gstRate / 100);
         const np = payments.map(p => p.studentId === s.id && p.status === "unpaid" ? { ...p, amount: newAmt } : p);
         setPayments(np); await dbSet(KEYS.payments, np);
+        
+        // Also update payments in Supabase
+        if (user?.id) {
+          for (const p of np) {
+            if (p.studentId === s.id && p.status === "unpaid") {
+              await updatePayment(user.id, p).catch(console.error);
+            }
+          }
+        }
       }
     }
     toast(isEdit ? "Student updated!" : "Student added!", { icon: "✅" });
@@ -2044,6 +2199,15 @@ function GuruPayPro({ user }) {
     setPayments(np);
     await dbSet(KEYS.students, ns);
     await dbSet(KEYS.payments, np);
+    
+    // Also delete from Supabase if user is logged in
+    if (user?.id) {
+      await deleteStudent(user.id, student.id).catch(console.error);
+      // Delete associated payments from Supabase
+      for (const p of prev.payments.filter(p => p.studentId === student.id)) {
+        await deletePayment(user.id, p.id).catch(console.error);
+      }
+    }
 
     toast("Student removed", {
       icon: "🗑️",
@@ -2059,10 +2223,15 @@ function GuruPayPro({ user }) {
   // Mark paid handler
   const handleMarkPaid = async (payment, { paidOn, lateFee, notes, amount }) => {
     const prev = [...payments];
-    const np = payments.map(p => p.id === payment.id
-      ? { ...p, status: "paid", paidOn, paidAt: new Date().toISOString(), lateFee, notes, amount }
-      : p);
+    const updatedPayment = { ...payment, status: "paid", paidOn, paidAt: new Date().toISOString(), lateFee, notes, amount };
+    const np = payments.map(p => p.id === payment.id ? updatedPayment : p);
     setPayments(np); await dbSet(KEYS.payments, np);
+    
+    // Also update in Supabase if user is logged in
+    if (user?.id) {
+      await updatePayment(user.id, updatedPayment).catch(console.error);
+    }
+    
     toast("Fee marked as paid!", { icon: "✅", onUndo: async () => { setPayments(prev); await dbSet(KEYS.payments, prev); } });
   };
 
@@ -2106,7 +2275,7 @@ function GuruPayPro({ user }) {
       {modal?.type === "addBatch" && <BatchModal onSave={saveBatch} onClose={closeModal} />}
       {modal?.type === "editBatch" && <BatchModal batch={modal.data} onSave={saveBatch} onClose={closeModal} />}
       {modal?.type === "confirm" && <ConfirmModal {...modal.data} onClose={closeModal} />}
-      {modal?.type === "generateFees" && <GenerateFeesModal batches={batches} students={students} payments={payments} setPayments={setPayments} selectedMonth={selectedMonth} toast={toast} onClose={closeModal} />}
+      {modal?.type === "generateFees" && <GenerateFeesModal user={user} batches={batches} students={students} payments={payments} setPayments={setPayments} selectedMonth={selectedMonth} toast={toast} onClose={closeModal} />}
       {modal?.type === "bulkReminder" && <BulkReminderModal unpaid={modal.data} students={students} batches={batches} selectedMonth={selectedMonth} whatsappConfig={whatsappConfig} onClose={closeModal} />}
       {modal?.type === "markPaid" && <MarkPaidModal {...modal.data} onSave={(opts) => handleMarkPaid(modal.data.payment || { id: uid(), studentId: modal.data.student.id, month: selectedMonth, status: "unpaid" }, opts)} onClose={closeModal} />}
       {modal?.type === "waive" && <WaiveModal student={modal.data.student} batch={modal.data.batch} onSave={async (reason) => {
@@ -2181,7 +2350,7 @@ function GuruPayPro({ user }) {
           <div className="content">
             {tab === "dashboard" && <DashboardTab {...commonProps} />}
             {tab === "fees" && <FeesTab {...commonProps} setPayments={setPayments} deleteStudent={deleteStudent} />}
-            {tab === "batches" && <BatchesTab batches={batches} setBatches={setBatches} students={students} setStudents={setStudents} payments={payments} setPayments={setPayments} toast={toast} openModal={openModal} selectedBatch={selectedBatch} setSelectedBatch={setSelectedBatch} profile={profile} />}
+            {tab === "batches" && <BatchesTab user={user} batches={batches} setBatches={setBatches} students={students} setStudents={setStudents} payments={payments} setPayments={setPayments} toast={toast} openModal={openModal} selectedBatch={selectedBatch} setSelectedBatch={setSelectedBatch} profile={profile} />}
             {tab === "reports" && <ReportsTab batches={batches} students={students} payments={payments} />}
             {tab === "settings" && <GuruPaySettings embedded={true} profile={profile} setProfile={setProfile} features={features} setFeatures={setFeatures} theme={theme} setTheme={setTheme} uiSettings={uiSettings} setUiSettings={setUiSettings} batches={batches} students={students} payments={payments} toast={toast} user={user} />}
           </div>

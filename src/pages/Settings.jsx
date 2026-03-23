@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { supabase } from "../supabase";
 
 const Icon = ({ d, color = "currentColor", size = 18, stroke = 1.8 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -150,14 +151,53 @@ function AppearancePanel({ dark, setDark, D, theme, setTheme, fontSize, setFontS
   );
 }
 
-function AuthPanel({ D, accentColor }) {
+function AuthPanel({ D, accentColor, onSignOut, onDeleteAccount }) {
   const [pin, setPin]       = useState(["","","","",""]);
   const [savedPin, setSavedPin] = useState(["","","","",""]);
   const [pinStatus, setPinStatus] = useState(""); // "saved" | "reset" | ""
   const [bio, setBio]       = useState(true);
   const [twoFA, setTwoFA]   = useState(false);
   const [lock, setLock]     = useState("5 min");
+  const [signingOut, setSigningOut] = useState(false);
   const pinRefs = useRef([]);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await supabase.auth.signOut();
+      if (onSignOut) onSignOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.")) {
+      return;
+    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Delete user's data from all tables first
+        const userId = user.id;
+        await supabase.from('payments').delete().eq('user_id', userId);
+        await supabase.from('students').delete().eq('user_id', userId);
+        await supabase.from('batches').delete().eq('user_id', userId);
+        await supabase.from('profiles').delete().eq('user_id', userId);
+        
+        // Then delete the user account
+        const { error } = await supabase.auth.admin.deleteUser(userId);
+        if (error) throw error;
+        
+        if (onDeleteAccount) onDeleteAccount();
+      }
+    } catch (error) {
+      console.error('Delete account error:', error);
+      alert("Failed to delete account. Please try again or contact support.");
+    }
+  };
 
   const handleSavePin = () => {
     if (pin.every(v => v !== "")) {
@@ -270,14 +310,17 @@ function AuthPanel({ D, accentColor }) {
         <p style={{ fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:D.textMuted,marginBottom:10 }}>Security Actions</p>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
           <button
+            onClick={handleDeleteAccount}
             style={{ height:42,borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,
               border:`1.5px solid rgba(255,94,94,0.35)`,background:"rgba(255,94,94,0.08)",color:"#FF5E5E" }}>
             Delete Account
           </button>
           <button
-            style={{ height:42,borderRadius:10,cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,
-              border:`1.5px solid rgba(255,94,94,0.35)`,background:"rgba(255,94,94,0.08)",color:"#FF5E5E" }}>
-            Sign Out
+            onClick={handleSignOut}
+            disabled={signingOut}
+            style={{ height:42,borderRadius:10,cursor:signingOut?"not-allowed":"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,
+              border:`1.5px solid rgba(255,94,94,0.35)`,background:"rgba(255,94,94,0.08)",color:"#FF5E5E",opacity:signingOut?0.6:1 }}>
+            {signingOut ? "Signing Out..." : "Sign Out"}
           </button>
         </div>
       </div>
