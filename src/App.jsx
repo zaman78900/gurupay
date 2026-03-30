@@ -96,17 +96,25 @@ useEffect(() => {
     }
   })()
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
+    async (event, session) => {
       if (disposed) return
 
-      if (!session) {
-        const { data: { session: latestSession } } = await supabase.auth.getSession()
-        if (disposed) return
-        setUser(latestSession?.user ?? null)
+      // Ensure logout reflects immediately in UI (no refresh needed).
+      if (event === "SIGNED_OUT") {
+        setUser(null)
         return
       }
 
-      setUser(session.user ?? null)
+      // For auth events that include a valid session, sync user instantly.
+      if (session?.user) {
+        setUser(session.user)
+        return
+      }
+
+      // Fallback safety for edge cases where event/session payload is partial.
+      const { data: { session: latestSession } } = await supabase.auth.getSession()
+      if (disposed) return
+      setUser(latestSession?.user ?? null)
     }
   )
 
