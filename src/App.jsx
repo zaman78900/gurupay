@@ -6,9 +6,9 @@ import GuruPaySettings from './pages/Settings';
 import BatchDetails from './components/BatchDetails';
 import html2canvas from "html2canvas";
 import { 
-  fetchBatches, createBatch, updateBatch, deleteBatch,
-  fetchStudents, createStudent, updateStudent, deleteStudent,
-  fetchPayments, createPayment, updatePayment, deletePayment,
+  fetchBatches, createBatch, updateBatch, deleteBatch as deleteBatchFromDb,
+  fetchStudents, createStudent, updateStudent, deleteStudent as deleteStudentFromDb,
+  fetchPayments, createPayment, updatePayment, deletePayment as deletePaymentFromDb,
   fetchProfile, saveProfile, fetchSettings, saveSettings
 } from './lib/database';
 
@@ -1594,7 +1594,7 @@ function BatchesTab({ user, batches, setBatches, students, setStudents, payments
     
     // Also delete from Supabase if user is logged in
     if (user?.id) {
-      await deleteBatch(user.id, batch.id).catch(console.error);
+      await deleteBatchFromDb(user.id, batch.id).catch(console.error);
     }
     
     if (selectedBatch && selectedBatch.id === batch.id) {
@@ -1614,9 +1614,9 @@ function BatchesTab({ user, batches, setBatches, students, setStudents, payments
     // Also delete from Supabase if user is logged in
     if (user?.id) {
       console.log('[DEBUG] Deleting from Supabase, userId:', user.id, 'studentId:', student.id);
-      await deleteStudent(user.id, student.id).catch(console.error);
+      await deleteStudentFromDb(user.id, student.id).catch(console.error);
       for (const p of prev.payments.filter(p => p.studentId === student.id)) {
-        await deletePayment(user.id, p.id).catch(console.error);
+        await deletePaymentFromDb(user.id, p.id).catch(console.error);
       }
     } else {
       console.log('[DEBUG] No user logged in, skipping Supabase delete');
@@ -2252,10 +2252,10 @@ function GuruPayPro({ user }) {
     
     // Also delete from Supabase if user is logged in
     if (user?.id) {
-      await deleteStudent(user.id, student.id).catch(console.error);
+      await deleteStudentFromDb(user.id, student.id).catch(console.error);
       // Delete associated payments from Supabase
       for (const p of prev.payments.filter(p => p.studentId === student.id)) {
-        await deletePayment(user.id, p.id).catch(console.error);
+        await deletePaymentFromDb(user.id, p.id).catch(console.error);
       }
     }
 
