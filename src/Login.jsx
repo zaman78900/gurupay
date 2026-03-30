@@ -178,7 +178,7 @@ export default function Login() {
               />
 
               <label style={{ display: 'block', fontSize: 14, color: '#334155', marginBottom: 6 }}>Create a Password</label>
-              <div style={{ position: 'relative', marginBottom: 12 }}>
+              <div style={{ position: 'relative', width:'100%' , marginBottom: 12 }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -208,13 +208,18 @@ export default function Login() {
                     right: 10,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    background: 'none',
+                    background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
                     color: '#64748B',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 30,
+                    height: 30,
+                    padding: 0,
                     fontSize: 16
+
                   }}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
