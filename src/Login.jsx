@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { FaEye, FaEyeSlash } from 'react-icons/fa'
 import { supabase, isSupabaseConfigured } from './supabase'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -186,29 +187,37 @@ export default function Login() {
                   autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   style={{
                     width: '100%',
+                    height: 40,
                     border: '1px solid #CBD5E1',
                     borderRadius: 10,
-                    height: 40,
-                    padding: '0 42px 0 12px',
+                    padding: '0 60px 0 12px',
                     outline: 'none'
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#0F172A'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#64748B'
+                  }}
                   style={{
                     position: 'absolute',
-                    right: 0,
+                    right: 10,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    border: 'none',
                     background: 'none',
-                    color: '#64748B',
+                    border: 'none',
                     cursor: 'pointer',
-                    fontSize: 12
+                    color: '#64748B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: 16
                   }}
                 >
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
 
