@@ -198,7 +198,7 @@ export default function Login() {
                   onClick={() => setShowPassword((prev) => !prev)}
                   style={{
                     position: 'absolute',
-                    right: 10,
+                    right: 0,
                     top: '50%',
                     transform: 'translateY(-50%)',
                     border: 'none',
