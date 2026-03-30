@@ -29,7 +29,6 @@ const SECTIONS = [
   { id:"business",   label:"Business Profile",   sub:"Name, address, GSTIN",         color:"#10a34a", bg:"rgba(16,163,74,0.15)"   },
   { id:"features",   label:"Feature Settings",   sub:"Controls and modules",          color:"#3B9EFF", bg:"rgba(59,158,255,0.15)"  },
   { id:"appearance", label:"Appearance",          sub:"Theme and visual behaviour",    color:"#2DD4BF", bg:"rgba(45,212,191,0.15)"  },
-  { id:"auth",       label:"Authentication",      sub:"Security and access controls",  color:"#7C6FFF", bg:"rgba(124,111,255,0.15)" },
   { id:"data",       label:"Data Management",     sub:"Backups and exports",           color:"#FF8C42", bg:"rgba(255,140,66,0.15)"  },
   { id:"about",      label:"About",               sub:"Version and legal information", color:"#8B8FA8", bg:"rgba(139,143,168,0.15)" },
 ];
@@ -444,7 +443,23 @@ function DataPanel({ D, accentColor }) {
   );
 }
 
-function AboutPanel({ D }) {
+function AboutPanel({ D, accentColor, onSignOut }) {
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      if (typeof onSignOut === "function") onSignOut();
+    } catch (error) {
+      console.error("Sign out error:", error);
+      alert("Failed to sign out. Please try again.");
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
   // ← "Developer" row removed
   const rows=[
     ["App Version","2.4.1 (Build 241)"],
@@ -461,6 +476,17 @@ function AboutPanel({ D }) {
           <p style={{ fontSize:13,color:D.textPri,fontWeight:600,textAlign:"right" }}>{v}</p>
         </div>
       ))}
+
+      <div style={{ marginTop:14,paddingTop:14,borderTop:`1px solid ${D.border}` }}>
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          style={{ width:"100%",height:42,borderRadius:10,cursor:signingOut?"not-allowed":"pointer",
+            border:`1.5px solid ${accentColor}55`,background:`${accentColor}1a`,
+            color:accentColor,fontSize:13,fontWeight:700,fontFamily:"inherit",opacity:signingOut?0.6:1 }}>
+          {signingOut ? "Signing Out..." : "Sign Out"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -576,6 +602,7 @@ export default function GuruPaySettings({
   students = [],
   payments = [],
   user,
+  onSignOut,
 }) {
   const isThemeControlledByApp = appTheme === "light" || appTheme === "dark";
   const [localDark, setLocalDark] = useState(appTheme === "dark");
@@ -668,9 +695,8 @@ export default function GuruPaySettings({
                   theme={colorTheme} setTheme={setColorTheme}
                   fontSize={fontSize} setFontSize={setFontSize}
                   accentColor={accentColor}/>,
-    auth:      <AuthPanel D={D} accentColor={accentColor}/>,
     data:      <DataPanel D={D} accentColor={accentColor}/>,
-    about:     <AboutPanel D={D}/>,
+    about:     <AboutPanel D={D} accentColor={accentColor} onSignOut={onSignOut}/>,
   };
 
   return (
