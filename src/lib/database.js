@@ -3,14 +3,109 @@ import { supabase } from '../supabase';
 // Database service for Supabase operations
 // All operations are scoped to the authenticated user
 
+const toUuid = (id) => (id ? String(id) : null);
+
+const mapBatchFromDb = (row) => ({
+  id: row.id,
+  name: row.name,
+  subject: row.subject,
+  timing: row.timing,
+  fee: row.fee ?? 0,
+  gstRate: row.gst_rate ?? 0,
+  capacity: row.capacity ?? 0,
+  color: row.color,
+});
+
+const mapBatchToDb = (batch, userId) => ({
+  id: batch.id,
+  user_id: toUuid(userId),
+  name: batch.name,
+  subject: batch.subject,
+  timing: batch.timing,
+  fee: batch.fee ?? 0,
+  gst_rate: batch.gstRate ?? 0,
+  capacity: batch.capacity ?? 0,
+  color: batch.color,
+});
+
+const mapStudentFromDb = (row) => ({
+  id: row.id,
+  rollNumber: row.roll_number ?? '',
+  status: row.status ?? 'Active',
+  name: row.name,
+  phone: row.phone,
+  email: row.email ?? '',
+  batchId: row.batch_id,
+  joiningDate: row.joining_date,
+  notes: row.notes ?? '',
+  discount: row.discount ?? 0,
+});
+
+const mapStudentToDb = (student, userId) => ({
+  id: student.id,
+  user_id: toUuid(userId),
+  roll_number: student.rollNumber ?? '',
+  status: student.status ?? 'Active',
+  name: student.name,
+  phone: student.phone,
+  email: student.email ?? null,
+  batch_id: student.batchId,
+  joining_date: student.joiningDate || null,
+  notes: student.notes ?? '',
+  discount: student.discount ?? 0,
+});
+
+const mapPaymentFromDb = (row) => ({
+  id: row.id,
+  studentId: row.student_id,
+  month: row.month,
+  status: row.status ?? 'unpaid',
+  amount: row.amount ?? 0,
+  paidOn: row.paid_on,
+  paidAt: row.paid_at,
+  lateFee: row.late_fee ?? 0,
+  notes: row.notes ?? '',
+});
+
+const mapPaymentToDb = (payment, userId) => ({
+  id: payment.id,
+  user_id: toUuid(userId),
+  student_id: payment.studentId,
+  month: payment.month,
+  status: payment.status ?? 'unpaid',
+  amount: payment.amount ?? 0,
+  paid_on: payment.paidOn || null,
+  paid_at: payment.paidAt || null,
+  late_fee: payment.lateFee ?? 0,
+  notes: payment.notes ?? '',
+});
+
+const mapProfileFromDb = (row) => {
+  if (!row) return null;
+  return {
+    name: row.name ?? '',
+    gstin: row.gstin ?? '',
+    address: row.address ?? '',
+    phone: row.phone ?? '',
+    email: row.email ?? '',
+    upiId: row.upi_id ?? '',
+  };
+};
+
+const mapProfileToDb = (profile) => ({
+  name: profile?.name ?? null,
+  gstin: profile?.gstin ?? null,
+  address: profile?.address ?? null,
+  phone: profile?.phone ?? null,
+  email: profile?.email ?? null,
+  upi_id: profile?.upiId ?? null,
+});
+
 export async function getUserId() {
   const { data: { user } } = await supabase.auth.getUser();
   // Ensure user_id is converted to UUID string if needed
   return user?.id ? String(user.id) : null;
 }
-
-// Helper to ensure user_id is UUID string
-const toUuid = (id) => id ? String(id) : null;
 
 // ─── BATCHES ─────────────────────────────────────────────────────────────
 export async function fetchBatches(userId) {
@@ -26,7 +121,7 @@ export async function fetchBatches(userId) {
     console.error('Error fetching batches:', error);
     return [];
   }
-  return data || [];
+  return (data || []).map(mapBatchFromDb);
 }
 
 export async function createBatch(userId, batch) {
@@ -35,11 +130,11 @@ export async function createBatch(userId, batch) {
   
   const { data, error } = await supabase
     .from('batches')
-    .insert([{ ...batch, user_id: uuid }])
+    .upsert([mapBatchToDb(batch, uuid)], { onConflict: 'id' })
     .select()
     .single();
   
-  return { data, error };
+  return { data: data ? mapBatchFromDb(data) : null, error };
 }
 
 export async function updateBatch(userId, batch) {
@@ -48,13 +143,13 @@ export async function updateBatch(userId, batch) {
   
   const { data, error } = await supabase
     .from('batches')
-    .update(batch)
+    .update({ ...mapBatchToDb(batch, uuid), updated_at: new Date().toISOString() })
     .eq('id', batch.id)
     .eq('user_id', uuid)
     .select()
     .single();
   
-  return { data, error };
+  return { data: data ? mapBatchFromDb(data) : null, error };
 }
 
 export async function deleteBatch(userId, batchId) {
@@ -84,7 +179,7 @@ export async function fetchStudents(userId) {
     console.error('Error fetching students:', error);
     return [];
   }
-  return data || [];
+  return (data || []).map(mapStudentFromDb);
 }
 
 export async function createStudent(userId, student) {
@@ -93,11 +188,11 @@ export async function createStudent(userId, student) {
   
   const { data, error } = await supabase
     .from('students')
-    .insert([{ ...student, user_id: uuid }])
+    .upsert([mapStudentToDb(student, uuid)], { onConflict: 'id' })
     .select()
     .single();
   
-  return { data, error };
+  return { data: data ? mapStudentFromDb(data) : null, error };
 }
 
 export async function updateStudent(userId, student) {
@@ -106,13 +201,13 @@ export async function updateStudent(userId, student) {
   
   const { data, error } = await supabase
     .from('students')
-    .update(student)
+    .update({ ...mapStudentToDb(student, uuid), updated_at: new Date().toISOString() })
     .eq('id', student.id)
     .eq('user_id', uuid)
     .select()
     .single();
   
-  return { data, error };
+  return { data: data ? mapStudentFromDb(data) : null, error };
 }
 
 export async function deleteStudent(userId, studentId) {
@@ -142,7 +237,7 @@ export async function fetchPayments(userId) {
     console.error('Error fetching payments:', error);
     return [];
   }
-  return data || [];
+  return (data || []).map(mapPaymentFromDb);
 }
 
 export async function createPayment(userId, payment) {
@@ -151,11 +246,11 @@ export async function createPayment(userId, payment) {
   
   const { data, error } = await supabase
     .from('payments')
-    .insert([{ ...payment, user_id: uuid }])
+    .upsert([mapPaymentToDb(payment, uuid)], { onConflict: 'id' })
     .select()
     .single();
   
-  return { data, error };
+  return { data: data ? mapPaymentFromDb(data) : null, error };
 }
 
 export async function updatePayment(userId, payment) {
@@ -164,13 +259,13 @@ export async function updatePayment(userId, payment) {
   
   const { data, error } = await supabase
     .from('payments')
-    .update(payment)
+    .update({ ...mapPaymentToDb(payment, uuid), updated_at: new Date().toISOString() })
     .eq('id', payment.id)
     .eq('user_id', uuid)
     .select()
     .single();
   
-  return { data, error };
+  return { data: data ? mapPaymentFromDb(data) : null, error };
 }
 
 export async function deletePayment(userId, paymentId) {
@@ -199,7 +294,7 @@ export async function fetchProfile(userId) {
   if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
     console.error('Error fetching profile:', error);
   }
-  return data || null;
+  return mapProfileFromDb(data || null);
 }
 
 export async function saveProfile(userId, profile) {
@@ -216,18 +311,18 @@ export async function saveProfile(userId, profile) {
   if (existing) {
     const { data, error } = await supabase
       .from('profiles')
-      .update({ ...profile, updated_at: new Date().toISOString() })
+      .update({ ...mapProfileToDb(profile), updated_at: new Date().toISOString() })
       .eq('id', uuid)
       .select()
       .single();
-    return { data, error };
+    return { data: data ? mapProfileFromDb(data) : null, error };
   } else {
     const { data, error } = await supabase
       .from('profiles')
-      .insert([{ ...profile, id: uuid }])
+      .insert([{ ...mapProfileToDb(profile), id: uuid }])
       .select()
       .single();
-    return { data, error };
+    return { data: data ? mapProfileFromDb(data) : null, error };
   }
 }
 
@@ -268,7 +363,7 @@ export async function saveSettings(userId, settings) {
   } else {
     const { data, error } = await supabase
       .from('settings')
-      .insert([{ ...settings, user_id: uuid }])
+      .insert([{ id: uuid, ...settings, user_id: uuid }])
       .select()
       .single();
     return { data, error };
