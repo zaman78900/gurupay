@@ -53,6 +53,11 @@ const withTimeout = (promise, ms = 10000, message = 'Request timed out') =>
     }),
   ])
 
+const isTimeoutError = (err) => {
+  const msg = err?.message || ''
+  return /timed out/i.test(msg)
+}
+
 useEffect(() => {
   let disposed = false
 
@@ -105,7 +110,7 @@ useEffect(() => {
     try {
       const { data: { session }, error: sessionError } = await withTimeout(
         supabase.auth.getSession(),
-        12000,
+        20000,
         'Auth session check timed out'
       )
       if (sessionError) throw sessionError
@@ -123,7 +128,17 @@ useEffect(() => {
     } catch (e) {
       console.error('Auth error:', e)
       if (disposed) return
-      setError(e.message)
+
+      // A timeout during bootstrap should not hard-block the app with a fatal screen.
+      // Fallback to logged-out state so user can still access Login.
+      if (isTimeoutError(e)) {
+        console.warn('Auth bootstrap timed out, falling back to logged-out state')
+        setUser(null)
+        setAuthProfile(null)
+        setError(null)
+      } else {
+        setError(e.message)
+      }
     } finally {
       if (disposed) return
       setLoading(false)
@@ -155,17 +170,25 @@ useEffect(() => {
       }
 
       // Fallback safety for edge cases where event/session payload is partial.
-      const { data: { session: latestSession } } = await supabase.auth.getSession()
-      if (disposed) return
-      setUser(latestSession?.user ?? null)
+      try {
+        const { data: { session: latestSession } } = await withTimeout(
+          supabase.auth.getSession(),
+          10000,
+          'Auth state sync timed out'
+        )
+        if (disposed) return
+        setUser(latestSession?.user ?? null)
 
-      if (latestSession?.user) {
-        try {
-          const profile = await fetchOwnProfile(latestSession.user.id)
-          if (!disposed) setAuthProfile(profile)
-        } catch (profileError) {
-          console.error('Profile fallback fetch error:', profileError)
+        if (latestSession?.user) {
+          try {
+            const profile = await fetchOwnProfile(latestSession.user.id)
+            if (!disposed) setAuthProfile(profile)
+          } catch (profileError) {
+            console.error('Profile fallback fetch error:', profileError)
+          }
         }
+      } catch (syncError) {
+        console.error('Auth state sync error:', syncError)
       }
     }
   )
