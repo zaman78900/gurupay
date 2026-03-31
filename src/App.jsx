@@ -304,6 +304,16 @@ const SEED_PROFILE = {
   email: "balaji@coaching.in", upiId: "balaji@okaxis",
 };
 
+function normalizeInstituteProfile(profile) {
+  const merged = { ...SEED_PROFILE, ...(profile || {}) };
+  const safeName = String(merged.name || "").trim();
+
+  return {
+    ...merged,
+    name: safeName || SEED_PROFILE.name,
+  };
+}
+
 // Default feature settings
 const DEFAULT_FEATURES = { showStudents: true, showAttendance: true, showPayments: true, showReports: true, enableNotifications: true, enableDarkMode: true, enableWaiveFee: true, enableGST: true, enableWhatsApp: true };
 const DEFAULT_WHATSAPP_CONFIG = { mode: "default", customTemplate: "" };
@@ -2219,7 +2229,7 @@ function FeeSyncPro({ user, authProfile }) {
         status: st.status || "Active",
         ...st
       }));
-      setBatches(b); setStudents(normalizedStudents); setPayments(p); setProfile(pr); setTheme(th); setFeatures(feat); setWhatsappConfig(normalizeWhatsAppConfig(waCfg || DEFAULT_WHATSAPP_CONFIG));
+      setBatches(b); setStudents(normalizedStudents); setPayments(p); setProfile(normalizeInstituteProfile(pr)); setTheme(th); setFeatures(feat); setWhatsappConfig(normalizeWhatsAppConfig(waCfg || DEFAULT_WHATSAPP_CONFIG));
       setUiSettings({ ...DEFAULT_UI_SETTINGS, ...(uiCfg || {}) });
       setLoading(false);
     })();
@@ -2418,6 +2428,7 @@ function FeeSyncPro({ user, authProfile }) {
   ];
 
   const PAGE_TITLES = { dashboard: "Dashboard", fees: "Fee Tracking", batches: "Batches & Students", reports: "Reports & Analytics", settings: "Settings" };
+  const safeProfileName = String(profile?.name || SEED_PROFILE.name || "FeeSync").trim() || "FeeSync";
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "var(--font-display)", color: "var(--accent)", background: "var(--bg)", flexDirection: "column", gap: 16 }}>
@@ -2479,9 +2490,9 @@ function FeeSyncPro({ user, authProfile }) {
           </nav>
           <div className="sidebar-footer">
             <div className="profile-card" style={{ marginBottom: 8 }}>
-              <div className="avatar">{profile.name[0]}</div>
+              <div className="avatar">{safeProfileName[0]?.toUpperCase()}</div>
               <div>
-                <div className="profile-name">{profile.name.split(" ").slice(0, 2).join(" ")}</div>
+                <div className="profile-name">{safeProfileName.split(" ").slice(0, 2).join(" ")}</div>
                 <div className="profile-plan">PRO{authProfile?.phone ? ` • ${authProfile.phone}` : ""}</div>
               </div>
             </div>

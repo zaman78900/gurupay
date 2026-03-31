@@ -7,7 +7,9 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey)
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    detectSessionInUrl: false,  // ← prevents worker crash
+    // Keep URL session detection enabled so OAuth/email-link callbacks
+    // can be exchanged into an authenticated session on return.
+    detectSessionInUrl: true,
     persistSession: true,
     autoRefreshToken: true,
   },
