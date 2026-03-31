@@ -84,18 +84,33 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for batches
+DROP POLICY IF EXISTS "Users can select their own batches" ON batches;
+DROP POLICY IF EXISTS "Users can insert their own batches" ON batches;
+DROP POLICY IF EXISTS "Users can update their own batches" ON batches;
+DROP POLICY IF EXISTS "Users can delete their own batches" ON batches;
+
 CREATE POLICY "Users can select their own batches" ON batches FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert their own batches" ON batches FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update their own batches" ON batches FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete their own batches" ON batches FOR DELETE USING (auth.uid() = user_id);
 
 -- Create policies for students
+DROP POLICY IF EXISTS "Users can select their own students" ON students;
+DROP POLICY IF EXISTS "Users can insert their own students" ON students;
+DROP POLICY IF EXISTS "Users can update their own students" ON students;
+DROP POLICY IF EXISTS "Users can delete their own students" ON students;
+
 CREATE POLICY "Users can select their own students" ON students FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert their own students" ON students FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update their own students" ON students FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete their own students" ON students FOR DELETE USING (auth.uid() = user_id);
 
 -- Create policies for payments
+DROP POLICY IF EXISTS "Users can select their own payments" ON payments;
+DROP POLICY IF EXISTS "Users can insert their own payments" ON payments;
+DROP POLICY IF EXISTS "Users can update their own payments" ON payments;
+DROP POLICY IF EXISTS "Users can delete their own payments" ON payments;
+
 CREATE POLICY "Users can select their own payments" ON payments FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert their own payments" ON payments FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update their own payments" ON payments FOR UPDATE USING (auth.uid() = user_id);
@@ -112,6 +127,11 @@ CREATE POLICY "Users can insert their own profile" ON profiles FOR INSERT WITH C
 CREATE POLICY "Users can update their own profile" ON profiles FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
 -- Create policies for settings
+DROP POLICY IF EXISTS "Users can select their own settings" ON settings;
+DROP POLICY IF EXISTS "Users can insert their own settings" ON settings;
+DROP POLICY IF EXISTS "Users can update their own settings" ON settings;
+DROP POLICY IF EXISTS "Users can delete their own settings" ON settings;
+
 CREATE POLICY "Users can select their own settings" ON settings FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert their own settings" ON settings FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update their own settings" ON settings FOR UPDATE USING (auth.uid() = user_id);
