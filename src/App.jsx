@@ -28,6 +28,15 @@ function isRecoverableNetworkError(error) {
   );
 }
 
+function isRecoverableAuthLockError(error) {
+  const msg = String(error?.message || "").toLowerCase();
+  return (
+    msg.includes('lock:sb-') ||
+    msg.includes('another request stole it') ||
+    msg.includes('was released because another request')
+  );
+}
+
 async function fetchBuildVersion() {
   // Skip in contexts where a network fetch to version file is not reliable.
   if (typeof window !== "undefined") {
@@ -159,14 +168,14 @@ useEffect(() => {
         }
       }
     } catch (e) {
-      if (!isRecoverableNetworkError(e)) {
+      if (!isRecoverableNetworkError(e) && !isRecoverableAuthLockError(e)) {
         console.error('Auth error:', e)
       }
       if (disposed) return
 
       // A timeout during bootstrap should not hard-block the app with a fatal screen.
       // Do not force logout here; auth listener may still hydrate session shortly.
-      if (isTimeoutError(e) || isRecoverableNetworkError(e)) {
+      if (isTimeoutError(e) || isRecoverableNetworkError(e) || isRecoverableAuthLockError(e)) {
         console.warn('Auth bootstrap timed out, keeping current auth state and waiting for auth listener')
         setError(null)
       } else {
