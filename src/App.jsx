@@ -2180,83 +2180,122 @@ function FeeSyncPro({ user, authProfile }) {
   const _pendingMarkPaid = useRef(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
-      const userId = user?.id;
-      
-      // Try to fetch from Supabase first
-      let supabaseBatches = [], supabaseStudents = [], supabasePayments = [], supabaseProfile = null, supabaseSettings = null;
-      
-      if (userId) {
-        supabaseBatches = await fetchBatches(userId);
-        supabaseStudents = await fetchStudents(userId);
-        supabasePayments = await fetchPayments(userId);
-        supabaseProfile = await fetchProfile(userId);
-        supabaseSettings = await fetchSettings(userId);
-      }
-      
-      // If Supabase has data, use it; otherwise fall back to localStorage or seed data
-      const hasSupabaseData = supabaseBatches.length > 0 || supabaseStudents.length > 0 || supabasePayments.length > 0;
-      
-      let b, s, p, pr, th, feat, waCfg, uiCfg;
-      
-      if (hasSupabaseData && userId) {
-        // Use Supabase data
-        b = supabaseBatches;
-        s = supabaseStudents;
-        p = supabasePayments;
-        pr = supabaseProfile || SEED_PROFILE;
-        th = "light";
-        feat = supabaseSettings ? {
-          showPayments: supabaseSettings.enable_gst !== false,
-          showStudents: true,
-          showReports: true,
-          showAttendance: false,
-          enableNotifications: true,
-          enableDarkMode: true,
-          enableWaiveFee: true,
-          enableGST: supabaseSettings.enable_gst !== false,
-          enableWhatsApp: supabaseSettings.enable_whatsapp !== false,
-        } : DEFAULT_FEATURES;
-        waCfg = DEFAULT_WHATSAPP_CONFIG;
-        uiCfg = DEFAULT_UI_SETTINGS;
-      } else {
-        // Fall back to localStorage or seed data
-        [b, s, p, pr, th, feat, waCfg, uiCfg] = await Promise.all([
-          dbGet(KEYS.batches, SEED_BATCHES), dbGet(KEYS.students, SEED_STUDENTS),
-          dbGet(KEYS.payments, SEED_PAYMENTS), dbGet(KEYS.profile, SEED_PROFILE), dbGet(KEYS.theme, "light"),
-          dbGet(KEYS.features, DEFAULT_FEATURES),
-          dbGet(KEYS.whatsappConfig, DEFAULT_WHATSAPP_CONFIG),
-          dbGet(KEYS.uiSettings, DEFAULT_UI_SETTINGS),
-        ]);
-        
-        // If user is logged in and we have seed data, migrate to Supabase
-        if (userId && (b.length > 0 || s.length > 0 || p.length > 0)) {
-          // Save existing data to Supabase
-          for (const batch of b) {
-            await createBatch(userId, batch);
-          }
-          for (const student of s) {
-            await createStudent(userId, student);
-          }
-          for (const payment of p) {
-            await createPayment(userId, payment);
-          }
-          if (pr) {
-            await saveProfile(userId, pr);
+      try {
+        const userId = user?.id;
+
+        // Defaults/fallbacks to keep dashboard usable even when network is unstable.
+        let supabaseBatches = [];
+        let supabaseStudents = [];
+        let supabasePayments = [];
+        let supabaseProfile = null;
+        let supabaseSettings = null;
+
+        if (userId) {
+          try {
+            [supabaseBatches, supabaseStudents, supabasePayments, supabaseProfile, supabaseSettings] = await Promise.all([
+              fetchBatches(userId).catch(() => []),
+              fetchStudents(userId).catch(() => []),
+              fetchPayments(userId).catch(() => []),
+              fetchProfile(userId).catch(() => null),
+              fetchSettings(userId).catch(() => null),
+            ]);
+          } catch (supabaseLoadError) {
+            console.warn("Supabase data load failed, falling back to local data:", supabaseLoadError);
           }
         }
+
+        // If Supabase has data, use it; otherwise fall back to localStorage/seed.
+        const hasSupabaseData =
+          supabaseBatches.length > 0 ||
+          supabaseStudents.length > 0 ||
+          supabasePayments.length > 0;
+
+        let b, s, p, pr, th, feat, waCfg, uiCfg;
+
+        if (hasSupabaseData && userId) {
+          b = supabaseBatches;
+          s = supabaseStudents;
+          p = supabasePayments;
+          pr = supabaseProfile || SEED_PROFILE;
+          th = "light";
+          feat = supabaseSettings
+            ? {
+                showPayments: supabaseSettings.enable_gst !== false,
+                showStudents: true,
+                showReports: true,
+                showAttendance: false,
+                enableNotifications: true,
+                enableDarkMode: true,
+                enableWaiveFee: true,
+                enableGST: supabaseSettings.enable_gst !== false,
+                enableWhatsApp: supabaseSettings.enable_whatsapp !== false,
+              }
+            : DEFAULT_FEATURES;
+          waCfg = DEFAULT_WHATSAPP_CONFIG;
+          uiCfg = DEFAULT_UI_SETTINGS;
+        } else {
+          [b, s, p, pr, th, feat, waCfg, uiCfg] = await Promise.all([
+            dbGet(KEYS.batches, SEED_BATCHES),
+            dbGet(KEYS.students, SEED_STUDENTS),
+            dbGet(KEYS.payments, SEED_PAYMENTS),
+            dbGet(KEYS.profile, SEED_PROFILE),
+            dbGet(KEYS.theme, "light"),
+            dbGet(KEYS.features, DEFAULT_FEATURES),
+            dbGet(KEYS.whatsappConfig, DEFAULT_WHATSAPP_CONFIG),
+            dbGet(KEYS.uiSettings, DEFAULT_UI_SETTINGS),
+          ]);
+
+          // Best-effort migration only (never block app if any insert fails).
+          if (userId && (b.length > 0 || s.length > 0 || p.length > 0)) {
+            Promise.allSettled([
+              ...b.map((batch) => createBatch(userId, batch)),
+              ...s.map((student) => createStudent(userId, student)),
+              ...p.map((payment) => createPayment(userId, payment)),
+              ...(pr ? [saveProfile(userId, pr)] : []),
+            ]).catch(() => {});
+          }
+        }
+
+        if (cancelled) return;
+
+        const normalizedStudents = (s || []).map((st) => ({
+          rollNumber: st.rollNumber || "",
+          status: st.status || "Active",
+          ...st,
+        }));
+
+        setBatches(b || []);
+        setStudents(normalizedStudents);
+        setPayments(p || []);
+        setProfile(normalizeInstituteProfile(pr));
+        setTheme(th || "light");
+        setFeatures(feat || DEFAULT_FEATURES);
+        setWhatsappConfig(normalizeWhatsAppConfig(waCfg || DEFAULT_WHATSAPP_CONFIG));
+        setUiSettings({ ...DEFAULT_UI_SETTINGS, ...(uiCfg || {}) });
+      } catch (err) {
+        console.error("Dashboard bootstrap failed, using safe defaults:", err);
+        if (cancelled) return;
+
+        // Last-resort fallback: never keep user stuck on loading screen.
+        setBatches(SEED_BATCHES);
+        setStudents(SEED_STUDENTS);
+        setPayments(SEED_PAYMENTS);
+        setProfile(SEED_PROFILE);
+        setTheme("light");
+        setFeatures(DEFAULT_FEATURES);
+        setWhatsappConfig(DEFAULT_WHATSAPP_CONFIG);
+        setUiSettings(DEFAULT_UI_SETTINGS);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      
-      // ensure new fields exist on loaded students
-      const normalizedStudents = (s || []).map(st => ({
-        rollNumber: st.rollNumber || "",
-        status: st.status || "Active",
-        ...st
-      }));
-      setBatches(b); setStudents(normalizedStudents); setPayments(p); setProfile(normalizeInstituteProfile(pr)); setTheme(th); setFeatures(feat); setWhatsappConfig(normalizeWhatsAppConfig(waCfg || DEFAULT_WHATSAPP_CONFIG));
-      setUiSettings({ ...DEFAULT_UI_SETTINGS, ...(uiCfg || {}) });
-      setLoading(false);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   useEffect(() => {
