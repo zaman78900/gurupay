@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, isSupabaseConfigured } from './supabase'
 import Login from './Login'
@@ -260,10 +259,74 @@ useEffect(() => {
     subscription.unsubscribe()
   }
 }, [])
-if (error) return <div style={{ padding: '2rem', color: 'red', backgroundColor: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>❌ Error: {error}</div>
-if (loading) return <div style={{ padding: '2rem', backgroundColor: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⏳ Loading...</div>
+if (error) {
+  return (
+    <div style={{
+      padding: '2rem',
+      backgroundColor: '#fef2f2',
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      <div style={{ textAlign: 'center', maxWidth: '500px', color: '#991b1b' }}>
+        <h1 style={{ fontSize: '2rem', margin: '0 0 1rem 0' }}>❌ Authentication Error</h1>
+        <p style={{ margin: '0 0 1rem 0', lineHeight: 1.6 }}>{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#dc2626',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '1rem',
+            fontWeight: 'bold'
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  )
+}
+
+if (loading) {
+  return (
+    <div style={{
+      padding: '2rem',
+      backgroundColor: '#fff',
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          margin: '0 auto 1rem',
+          borderRadius: '50%',
+          border: '4px solid #e5e7eb',
+          borderTop: '4px solid #059669',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <p style={{ color: '#6b7280', margin: 0 }}>Loading GuruPay...</p>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    </div>
+  )
+}
+
 if (!user) return <Login />
-return <FeeSyncPro user={user} authProfile={authProfile} /> // show app when logged in
+return <FeeSyncPro user={user} authProfile={authProfile} />
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
