@@ -1422,7 +1422,7 @@ function MarkPaidModal({ student, batch, payment, onSave, onClose }) {
           </div>
           <div className="input-row">
             <div className="input-group"><label className="input-label">Payment Date</label><input className="input" type="date" value={paidOn} onChange={e => setPaidOn(e.target.value)} /></div>
-            <div className="input-group"><label className="input-label">Late Fee (₹)</label><input className="input" type="number" min="0" value={lateFee} onChange={e => setLateFee(e.target.value)} placeholder="0" /></div>
+            <div className="input-group"><label className="input-label">Late Fee (₹)</label><input className="input" type="number" min="0" value={lateFee} onChange={e => setLateFee(+e.target.value)} placeholder="0" /></div>
           </div>
           <div className="input-group"><label className="input-label">Notes (optional)</label><input className="input" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Cash / UPI / Cheque..." /></div>
         </div>
