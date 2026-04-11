@@ -22,19 +22,10 @@ export const supabase = isSupabaseConfigured
         detectSessionInUrl: true,
         persistSession: true,
         autoRefreshToken: true,
-        // Reduce memory pressure and improve bootstrap speed
-        persistSessionAsJWT: true,
-        flowType: 'implicit',
       },
       realtime: {
         params: {
           eventsPerSecond: 10,
-        },
-      },
-      global: {
-        // Improve fetch timeout for slow connections
-        headers: {
-          'x-client-info': 'gurupay',
         },
       },
     })
