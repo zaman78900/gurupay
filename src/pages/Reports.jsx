@@ -1,124 +1,102 @@
-import { useApp } from "../context/AppContext";
+import { useMemo } from "react";
+import { RevenueReport } from "../models/RevenueReport";
 
-const monthKey = (d = new Date()) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-const monthLabel = (k) => {
-  if (!k) return "";
-  const [y, m] = k.split("-");
-  return new Date(+y, +m - 1).toLocaleString("en-IN", {
-    month: "long",
-    year: "numeric",
-  });
-};
-const fmtINR = (n) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(n || 0);
-const months6 = Array.from({ length: 6 }, (_, i) => {
-  const d = new Date();
-  d.setMonth(d.getMonth() - i);
-  return monthKey(d);
-});
-const curMonth = monthKey();
+export default function ReportsPage({ payments, batches, students }) {
+  const stats = useMemo(
+    () => RevenueReport.getStats(payments, batches, students),
+    [payments, batches, students]
+  );
 
-export default function Reports() {
-  const { state } = useApp();
-  const { batches, students, payments } = state;
+  const monthlyRevenue = useMemo(
+    () => RevenueReport.calculateMonthlyRevenue(payments, batches, students),
+    [payments, batches, students]
+  );
 
-  const getBatch = (id) => batches.find((b) => b.id === id);
-  const _getStudent = (id) => students.find((s) => s.id === id);
+  const batchRevenue = useMemo(
+    () => RevenueReport.calculateBatchRevenue(payments, batches, students),
+    [payments, batches, students]
+  );
 
-  const totalGST = (month) =>
-    batches.reduce((acc, b) => {
-      const bStu = students.filter((s) => s.batchId === b.id);
-      const bPaid = payments.filter(
-        (p) => p.month === month && p.status === "paid" && bStu.find((s) => s.id === p.studentId)
-      );
-      return (
-        acc + bPaid.reduce((a, p) => a + Math.round((p.amount * b.gstRate) / (100 + b.gstRate)), 0)
-      );
-    }, 0);
+  const fmtINR = (n) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(n || 0);
 
   return (
-    <div>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-header"><div><div className="card-title">6-Month Revenue Report</div></div></div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Month</th><th>Expected</th><th>Collected</th><th>Pending</th><th>GST</th><th>Rate</th></tr></thead>
-            <tbody>
-              {months6.map((m) => {
-                const mp = payments.filter((p) => p.month === m);
-                const mc = mp.filter((p) => p.status === "paid");
-                const collected = mc.reduce((a, p) => a + p.amount + (p.lateFee || 0), 0);
-                const expected = mp.reduce((a, p) => a + p.amount, 0);
-                const pending = mp.filter((p) => p.status === "unpaid").reduce((a, p) => a + p.amount, 0);
-                const rate = mp.length ? Math.round((mc.length / mp.length) * 100) : 0;
-                const gst = totalGST(m);
-                const isCur = m === curMonth;
-                return (
-                  <tr key={m} style={{ fontWeight: isCur ? 700 : 400 }}>
-                    <td><span style={{ color: isCur ? "var(--accent)" : "inherit" }}>{monthLabel(m)}{isCur ? " •" : ""}</span></td>
-                    <td className="td-mono">{fmtINR(expected)}</td>
-                    <td className="td-mono" style={{ color: "var(--accent)" }}>{fmtINR(collected)}</td>
-                    <td className="td-mono" style={{ color: pending > 0 ? "var(--red)" : "var(--text4)" }}>{fmtINR(pending)}</td>
-                    <td className="td-mono" style={{ color: "var(--amber)" }}>{fmtINR(gst)}</td>
-                    <td>{rate}%</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+    <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
+      <h1 style={{ margin: "0 0 2rem 0", color: "#111" }}>📊 Revenue & Analytics</h1>
+
+      {/* Key Metrics */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
+        <div style={{ backgroundColor: "#10B981", color: "#fff", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.5rem" }}>Total Revenue</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: "bold" }}>{fmtINR(stats.totalRevenue)}</div>
+          <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: "0.5rem" }}>From {stats.paidCount} payments</div>
+        </div>
+
+        <div style={{ backgroundColor: "#F59E0B", color: "#fff", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.5rem" }}>Collection Rate</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: "bold" }}>{stats.collectionRate}%</div>
+          <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: "0.5rem" }}>Expected: {fmtINR(stats.expectedRevenue)}</div>
+        </div>
+
+        <div style={{ backgroundColor: "#3B82F6", color: "#fff", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.5rem" }}>Late Fees Collected</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: "bold" }}>{fmtINR(stats.totalLateFee)}</div>
+          <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: "0.5rem" }}>Additional income</div>
+        </div>
+
+        <div style={{ backgroundColor: "#EF4444", color: "#fff", padding: "1.5rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ fontSize: "0.875rem", opacity: 0.9, marginBottom: "0.5rem" }}>Outstanding</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: "bold" }}>₹{stats.unpaidCount}</div>
+          <div style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: "0.5rem" }}>{stats.unpaidCount} unpaid</div>
         </div>
       </div>
 
-      <div className="grid-2">
-        <div className="card">
-          <div className="card-header"><div><div className="card-title">GST Summary — {monthLabel(curMonth)}</div></div></div>
-          {batches.map((b) => {
-            const bStu = students.filter((s) => s.batchId === b.id);
-            const bPaid = payments.filter((p) => p.month === curMonth && p.status === "paid" && bStu.find((s) => s.id === p.studentId));
-            const taxable = bPaid.reduce((a, p) => a + p.amount - Math.round((p.amount * b.gstRate) / (100 + b.gstRate)), 0);
-            const gstAmt = bPaid.reduce((a, p) => a + Math.round((p.amount * b.gstRate) / (100 + b.gstRate)), 0);
-            return (
-              <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}><span className="dot" style={{ background: b.color }} />{b.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--text4)" }}>GST @ {b.gstRate}% · {bPaid.length} students</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--amber)" }}>{fmtINR(gstAmt)}</div>
-                  <div style={{ fontSize: 11, color: "var(--text4)" }}>Base: {fmtINR(taxable)}</div>
+      {/* Batch Revenue */}
+      <div style={{ marginBottom: "2rem", backgroundColor: "#fff", borderRadius: "8px", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)" }}>
+        <h2 style={{ margin: "0 0 1.5rem 0", fontSize: "1.25rem", color: "#111" }}>Revenue by Batch</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
+          {batchRevenue.map((batch) => (
+            <div key={batch.id} style={{ border: "1px solid #e5e7eb", borderRadius: "6px", padding: "1.5rem" }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "1rem" }}>
+                <div style={{ width: "12px", height: "12px", borderRadius: "50%", backgroundColor: batch.color, marginRight: "0.75rem" }} />
+                <h3 style={{ margin: 0, color: "#111", fontSize: "1rem" }}>{batch.name}</h3>
+              </div>
+              <div style={{ marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "1px solid #e5e7eb" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", fontSize: "0.875rem" }}>
+                  <span style={{ color: "#6B7280" }}>Revenue:</span>
+                  <span style={{ fontWeight: "600", color: "#111" }}>{fmtINR(batch.revenue)}</span>
                 </div>
               </div>
-            );
-          })}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontWeight: 700 }}>
-            <span>Total GST Collected</span>
-            <span style={{ color: "var(--amber)", fontFamily: "var(--font-mono)" }}>{fmtINR(totalGST(curMonth))}</span>
-          </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="card">
-          <div className="card-header"><div><div className="card-title">Payment Consistency</div></div></div>
-          {students.map((s) => {
-            const hist = months6.filter((m) => payments.find((p) => p.studentId === s.id && p.month === m));
-            const paid = hist.filter((m) => payments.find((p) => p.studentId === s.id && p.month === m && p.status === "paid")).length;
-            const rate = hist.length ? Math.round((paid / hist.length) * 100) : 0;
-            const b = getBatch(s.batchId);
-            return (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--text4)" }}>{b?.name}</div>
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 700 }}>{rate}%</span>
-              </div>
-            );
-          })}
-        </div>
+      {/* Monthly Revenue */}
+      <div style={{ marginBottom: "2rem", backgroundColor: "#fff", borderRadius: "8px", padding: "1.5rem", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)" }}>
+        <h2 style={{ margin: "0 0 1.5rem 0", fontSize: "1.25rem", color: "#111" }}>Monthly Revenue Trend</h2>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+              <th style={{ textAlign: "left", padding: "1rem", color: "#6B7280", fontWeight: "600" }}>Month</th>
+              <th style={{ textAlign: "right", padding: "1rem", color: "#6B7280", fontWeight: "600" }}>Revenue</th>
+              <th style={{ textAlign: "right", padding: "1rem", color: "#6B7280", fontWeight: "600" }}>Late Fees</th>
+            </tr>
+          </thead>
+          <tbody>
+            {monthlyRevenue.map((month, idx) => (
+              <tr key={idx} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                <td style={{ padding: "1rem", color: "#111" }}>{month.month}</td>
+                <td style={{ padding: "1rem", textAlign: "right", color: "#111", fontWeight: "600" }}>{fmtINR(month.revenue)}</td>
+                <td style={{ padding: "1rem", textAlign: "right", color: "#111" }}>{fmtINR(month.lateFeeCollected)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
