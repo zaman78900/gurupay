@@ -324,7 +324,7 @@ const SEED_PAYMENTS = [
 ];
 const SEED_PROFILE = {
   name: "Sri Balaji Coaching Academy", gstin: "29ABCDE1234F1Z5",
-  address: "12, MG Road, Bengaluru – 560001", phone: "9876543210",
+  address: "12, MH Road, Bengaluru – 560001", phone: "9876543210",
   email: "balaji@coaching.in", upiId: "balaji@okaxis",
 };
 
