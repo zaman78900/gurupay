@@ -73,25 +73,55 @@ function MarkPaidModalContent({ student, batch, payment, onSave, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-        <div className="modal-header">
-          <div><div className="modal-title">✅ Mark as Paid</div><div className="modal-subtitle">{student.name} · {batch.name}</div></div>
-          <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}>✕</button>
+      <div className="modal-backdrop" onClick={onClose}></div>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 450 }}>
+        <div className="modal-header" style={{ background: "var(--gradient-success)", borderRadius: "16px 16px 0 0", paddingBottom: 20, color: "white" }}>
+          <div style={{flex: 1}}>
+            <div className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 4}}>✅ Mark as Paid</div>
+            <div className="modal-subtitle" style={{color: "rgba(255,255,255,0.85)"}}>{student.name} · {batch.name}</div>
+          </div>
+          <button className="modal-close" onClick={onClose} style={{color: "white", fontSize: 24}}>✕</button>
         </div>
         <div className="modal-body">
-          <div style={{ background: "var(--bg3)", borderRadius: "var(--radius-sm)", padding: "12px 14px", marginBottom: 14, fontSize: 13 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ color: "var(--text3)" }}>Base fee</span><span style={{ fontWeight: 600 }}>₹{base.toLocaleString("en-IN")}</span></div>
-            {gst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ color: "var(--text3)" }}>GST ({batch.gstRate}%)</span><span style={{ fontWeight: 600 }}>₹{gst.toLocaleString("en-IN")}</span></div>}
-            {lateFee > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ color: "var(--red)" }}>Late fee</span><span style={{ color: "var(--red)", fontWeight: 600 }}>₹{(+lateFee).toLocaleString("en-IN")}</span></div>}
-            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border)", paddingTop: 8, marginTop: 4 }}><span style={{ fontWeight: 700 }}>Total</span><span style={{ fontWeight: 700, color: "var(--accent)", fontFamily: "var(--font-display)", fontSize: 16 }}>₹{total.toLocaleString("en-IN")}</span></div>
+          <div style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)", borderRadius: "14px", padding: "16px", marginBottom: 20, border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>Base Fee</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>₹{base.toLocaleString("en-IN")}</div>
+              </div>
+              {gst > 0 && <div>
+                <div style={{ fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>GST ({batch.gstRate}%)</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>₹{gst.toLocaleString("en-IN")}</div>
+              </div>}
+            </div>
+            {lateFee > 0 && <div style={{ padding: "10px 0", borderTop: "1px solid rgba(220,38,38,.15)", marginBottom: 8, paddingTop: 12, display: "flex", justifyContent: "space-between" }}>
+              <div style={{fontSize: 12, color: "var(--red)", fontWeight: 600}}>⚠️ Late Fee</div>
+              <div style={{color: "var(--red)", fontWeight: 700, fontSize: 14}}>₹{(+lateFee).toLocaleString("en-IN")}</div>
+            </div>}
+            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "2px solid rgba(5,150,105,.25)", paddingTop: 14, marginTop: 8 }}>
+              <span style={{ fontWeight: 700, color: "var(--text)" }}>Total Amount</span>
+              <span style={{ fontWeight: 800, color: "var(--accent)", fontFamily: "var(--font-display)", fontSize: 18 }}>₹{total.toLocaleString("en-IN")}</span>
+            </div>
           </div>
-          <div className="input-group"><label className="input-label">Payment Date</label><input type="date" className="input" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} /></div>
-          <div className="input-group"><label className="input-label">Late Fee (if any)</label><input type="number" className="input" value={lateFee} onChange={(e) => setLateFee(e.target.value)} placeholder="0" min="0" /></div>
-          <div className="input-group"><label className="input-label">Notes</label><textarea className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Cheque #1234, Online transfer..." /></div>
+          
+          <div className="input-group">
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)"}}>📅 Payment Date</label>
+            <input type="date" className="input" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} style={{borderRadius: "10px"}} />
+          </div>
+          
+          <div className="input-group">
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)"}}>⚠️ Late Fee (if any)</label>
+            <input type="number" className="input" value={lateFee} onChange={(e) => setLateFee(e.target.value)} placeholder="0" min="0" style={{borderRadius: "10px"}} />
+          </div>
+          
+          <div className="input-group">
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)"}}>📝 Notes</label>
+            <textarea className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Cheque #1234, Online transfer..." style={{borderRadius: "10px"}} />
+          </div>
         </div>
-        <div className="modal-footer">
+        <div className="modal-footer" style={{paddingTop: 16}}>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave}>Mark Paid</button>
+          <button className="btn btn-primary" onClick={handleSave} style={{background: "var(--gradient-success)", boxShadow: "0 6px 20px rgba(16, 185, 129, 0.3)"}}>Mark Paid</button>
         </div>
       </div>
     </div>
@@ -261,22 +291,33 @@ export default function Fees() {
       {/* Modals */}
       {modal?.type === "generateFees" && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380 }}>
-            <div className="modal-header">
-              <div><div className="modal-title">⚡ Generate Fees</div></div>
+          <div className="modal-backdrop" onClick={closeModal}></div>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header" style={{background: "var(--gradient-warning)", borderRadius: "16px 16px 0 0", paddingBottom: 20, color: "white"}}>
+              <div style={{flex: 1}}>
+                <div className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 4}}>⚡ Generate Fees</div>
+                <div className="modal-subtitle" style={{color: "rgba(255,255,255,0.8)"}}>For {monthLabel(selectedMonth)}</div>
+              </div>
+              <button className="modal-close" onClick={closeModal} style={{color: "white", fontWeight: "bold"}}>✕</button>
             </div>
             <div className="modal-body">
-              <div style={{ textAlign: "center", padding: "8px 0 16px" }}>
-                <div style={{ fontSize: 40, marginBottom: 8 }}>⚡</div>
-                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Generate for {monthLabel(selectedMonth)}</div>
-                <div style={{ fontSize: 13, color: "var(--text3)", lineHeight: 1.6 }}>
-                  {students.filter(s => !getPayment(s.id, selectedMonth)).length} students don't have fees yet
+              <div style={{ textAlign: "center", padding: "24px 0" }}>
+                <div style={{ fontSize: 56, marginBottom: 16, animation: "pulse 2s infinite" }}>⚡</div>
+                <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: "var(--text)" }}>Ready to Generate</div>
+                <div style={{ fontSize: 14, color: "var(--text3)", lineHeight: 1.8 }}>
+                  <strong style={{color: "var(--text)", fontSize: 18}}>{students.filter(s => !getPayment(s.id, selectedMonth)).length}</strong>
+                  <div style={{marginTop: 4}}>students need fees for {monthLabel(selectedMonth)}</div>
                 </div>
+              </div>
+              <div style={{background: "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%)", borderRadius: "12px", padding: "14px", marginBottom: 0, borderLeft: "4px solid var(--amber)"}}>
+                <div style={{fontSize: 12, color: "var(--text2)", fontWeight: 600}}>💡 This will create fee records for all selected students</div>
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleGenerateFeesConfirm}>Generate</button>
+              <button className="btn btn-primary" onClick={handleGenerateFeesConfirm} style={{background: "var(--gradient-warning)", boxShadow: "0 6px 20px rgba(245, 158, 11, 0.3)"}}>
+                Generate {students.filter(s => !getPayment(s.id, selectedMonth)).length} Fees
+              </button>
             </div>
           </div>
         </div>
@@ -311,27 +352,52 @@ export default function Fees() {
         />
       )}
 
-      <div className="toolbar">
-        <select className="month-sel" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+      <div style={{display: "flex", gap: 14, marginBottom: 20, flexWrap: "wrap", alignItems: "center"}}>
+        <div className="stat-card" style={{flex: "1 1 140px", minHeight: "auto", cursor: "default"}}>
+          <div style={{fontSize: 22, marginBottom: 8}}>💰</div>
+          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}>Collected</div>
+          <div style={{fontSize: 18, fontWeight: 800, color: "var(--accent)", fontFamily: "var(--font-display)"}}>₹{collected.toLocaleString("en-IN")}</div>
+          <div style={{fontSize: 10, color: "var(--text4)", marginTop: 4}}>{paid.length} payments</div>
+        </div>
+        
+        <div className="stat-card" style={{flex: "1 1 140px", minHeight: "auto", cursor: "default"}}>
+          <div style={{fontSize: 22, marginBottom: 8}}>⏳</div>
+          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}>Pending</div>
+          <div style={{fontSize: 18, fontWeight: 800, color: "var(--red)", fontFamily: "var(--font-display)"}}>₹{pending.toLocaleString("en-IN")}</div>
+          <div style={{fontSize: 10, color: "var(--text4)", marginTop: 4}}>{unpaid.length} payments</div>
+        </div>
+        
+        <div className="stat-card" style={{flex: "1 1 140px", minHeight: "auto", cursor: "default"}}>
+          <div style={{fontSize: 22, marginBottom: 8}}>📊</div>
+          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}>Collection Rate</div>
+          <div style={{fontSize: 18, fontWeight: 800, color: "var(--blue)", fontFamily: "var(--font-display)"}}>{rate}%</div>
+          <div style={{fontSize: 10, color: "var(--text4)", marginTop: 4}}>of {mPayments.length} total</div>
+        </div>
+      </div>
+      
+      <div className="toolbar" style={{background: "var(--bg2)", padding: "14px 16px", borderRadius: "12px", border: "1px solid var(--border)"}}>
+        <select className="month-sel" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={{padding: "8px 12px", fontWeight: 600}}>
           {months6.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
-        <button className="btn btn-secondary btn-sm" onClick={handleGenerateFees}>⚡ Generate</button>
+        <button className="btn btn-secondary btn-sm" onClick={handleGenerateFees} style={{borderRadius: "8px"}}>⚡ Generate</button>
         {selected.size > 0 && (
-          <button className="btn btn-primary btn-sm" onClick={handleBulkMarkPaid} style={{background: "var(--gradient-primary)", color: "white"}}>
+          <button className="btn btn-primary btn-sm" onClick={handleBulkMarkPaid} style={{background: "var(--gradient-success)", color: "white", borderRadius: "8px", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)"}} title={`Mark ${selected.size} payments as paid`}>
             ✓ Mark {selected.size} as Paid
           </button>
         )}
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={exportCSV}><I.Download /> Export CSV</button>
+          <button className="btn btn-secondary btn-sm" onClick={exportCSV} style={{borderRadius: "8px"}}><I.Download /> Export CSV</button>
         </div>
       </div>
-      <div className="card">
-        <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-          <div className="search-wrap" style={{ flex: "1 1 180px" }}><I.Search /><input className="input" style={{ paddingLeft: 34 }} placeholder="Search student or phone..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+      <div className="card" style={{borderRadius: "14px", border: "1px solid var(--border)", boxShadow: "0 4px 6px rgba(0,0,0,.05)"}}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+          <div className="search-wrap" style={{ flex: "1 1 200px", position: "relative" }}><I.Search /><input className="input" style={{ paddingLeft: 34, borderRadius: "10px" }} placeholder="🔍 Search student or phone..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" style={{borderRadius: "12px", border: "none", overflow: "hidden"}}>
           <table>
-            <thead><tr><th style={{width: 32}}><input type="checkbox" checked={selected.size === unpaid.length && unpaid.length > 0} onChange={selectAll} /></th><th>Student</th><th>Batch</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Paid On</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
+            <thead style={{background: "linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(15, 23, 42, 0.04) 100%)"}}><tr><th style={{width: 40, paddingLeft: 16}}>
+              <input type="checkbox" checked={selected.size === unpaid.length && unpaid.length > 0} onChange={selectAll} style={{cursor: "pointer", width: 18, height: 18, accentColor: "var(--accent)"}} />
+            </th><th>Name</th><th>Batch</th><th style={{textAlign: "right", paddingRight: 16}}>Amount</th><th>Status</th><th>Due Date</th><th>Paid On</th><th style={{ textAlign: "right", paddingRight: 16 }}>Actions</th></tr></thead>
             <tbody>
               {filtered.map((s) => {
                 const b = getBatch(s.batchId);
@@ -341,60 +407,96 @@ export default function Fees() {
                 const days = daysUntilDue(p?.dueDate);
                 const isSelected = p && selected.has(p.id);
                 const isUnpaid = p?.status === "unpaid";
+                const isPaid = p?.status === "paid";
+                const isOverdue = days !== null && days < 0;
+                const isDueToday = days === 0;
+                const isDueSoon = days !== null && days > 0 && days <= 3;
 
                 return (
-                  <tr key={s.id} style={{background: isSelected ? "linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)" : "transparent"}}>
-                    <td style={{width: 32}}>
+                  <tr key={s.id} style={
+                    isSelected ? {
+                      background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)",
+                      borderLeft: "3px solid var(--accent)"
+                    } : isPaid ? {
+                      background: "linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, rgba(5, 150, 105, 0.02) 100%)",
+                    } : isOverdue ? {
+                      background: "linear-gradient(135deg, rgba(220, 38, 38, 0.04) 0%, rgba(220, 38, 38, 0.02) 100%)",
+                    } : {}
+                  }>
+                    <td style={{width: 40, paddingLeft: 16}}>
                       {isUnpaid && (
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleSelect(p.id)}
+                          style={{cursor: "pointer", width: 18, height: 18, accentColor: "var(--accent)"}}
                         />
                       )}
                     </td>
-                    <td><div style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</div></td>
-                    <td>{b.name}</td>
-                    <td>{fmtINR(amt + (p?.lateFee || 0))}</td>
-                    <td>{p?.status || "not generated"}</td>
+                    <td><div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)", letterSpacing: "-0.3px" }}>{s.name}</div></td>
+                    <td><span className="badge badge-batch" style={{fontWeight: 600}}>{b.name}</span></td>
+                    <td style={{textAlign: "right", paddingRight: 16, fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, color: isPaid ? "var(--accent)" : "var(--text)"}}>₹{(amt + (p?.lateFee || 0)).toLocaleString("en-IN")}</td>
+                    <td>
+                      {!p ? (
+                        <span className="badge" style={{background: "rgba(100, 116, 139, 0.1)", color: "var(--text4)", fontSize: 11, fontWeight: 600}}>Not Generated</span>
+                      ) : p.status === "paid" ? (
+                        <span className="badge badge-paid" style={{fontWeight: 700, fontSize: 11}}>✓ Paid</span>
+                      ) : (
+                        <span className="badge badge-unpaid" style={{fontWeight: 700, fontSize: 11}}>⏳ Unpaid</span>
+                      )}
+                    </td>
                     <td>
                       <div style={{fontSize: 12}}>
                         {p?.dueDate ? fmtDate(p.dueDate) : "—"}
                         {p?.dueDate && days !== null && (
-                          <div style={{fontSize: 11, color: days > 0 ? "var(--text4)" : days === 0 ? "var(--amber)" : "var(--red)"}}>
-                            {days > 0 ? `in ${days}d` : days === 0 ? "Today" : `${Math.abs(days)}d overdue`}
+                          <div style={{fontSize: 11, fontWeight: 600, marginTop: 2, color: isOverdue ? "var(--red)" : isDueToday ? "var(--amber)" : isDueSoon ? "var(--amber)" : "var(--text4)"}}>
+                            {isOverdue ? `⚠️ ${Math.abs(days)}d overdue` : isDueToday ? "🔔 Due today" : isDueSoon ? `📅 ${days}d left` : `✓ ${days}d left`}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td>{p?.status === "paid" ? fmtDate(p.paidOn) : "—"}</td>
-                    <td><div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
-                      {p?.status === "paid" && (
-                        <ReceiptButton
-                          student={{
-                            ...s,
-                            dueAmount: s?.dueAmount ?? Math.max((b?.fee || 0) - (p?.amount || 0), 0),
-                          }}
-                          batch={b}
-                          payment={p}
-                          settingsData={{
-                            ...settings,
-                            ...profile,
-                            instituteName: profile?.name || settings?.instituteName,
-                          }}
-                        />
-                      )}
-                      {p?.status === "paid" && <button className="btn btn-danger btn-sm" onClick={() => handleUndo(p)}><I.Undo /></button>}
-                      {p?.status === "paid" && <button className="btn btn-secondary btn-sm" onClick={() => { /* Built-in receipt shown above */ }}><I.Receipt /> Invoice</button>}
-                      {p?.status === "unpaid" && <button className="btn btn-secondary btn-sm" onClick={() => handleMarkPaidClick(s, p)}>Mark Paid</button>}
-                      {p?.status === "unpaid" && <button className="btn btn-secondary btn-sm" onClick={() => handleSetDueDate(p)}><I.Check /> Due</button>}
-                    </div></td>
+                    <td>{isPaid ? fmtDate(p.paidOn) : "—"}</td>
+                    <td style={{paddingRight: 16}}>
+                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
+                        {isPaid && (
+                          <>
+                            <ReceiptButton
+                              student={{
+                                ...s,
+                                dueAmount: s?.dueAmount ?? Math.max((b?.fee || 0) - (p?.amount || 0), 0),
+                              }}
+                              batch={b}
+                              payment={p}
+                              settingsData={{
+                                ...settings,
+                                ...profile,
+                                instituteName: profile?.name || settings?.instituteName,
+                              }}
+                            />
+                            <button className="btn btn-danger btn-sm" onClick={() => handleUndo(p)} title="Undo payment"><I.Undo /></button>
+                          </>
+                        )}
+                        {isUnpaid && (
+                          <>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleSetDueDate(p)} title="Set due date" style={{borderRadius: "7px"}}>📅</button>
+                            <button className="btn btn-primary btn-sm" onClick={() => handleMarkPaidClick(s, p)} style={{background: "var(--gradient-success)", borderRadius: "7px", boxShadow: "0 2px 8px rgba(16, 185, 129, 0.2)", color: "white"}}>✓ Paid</button>
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+        {filtered.length === 0 && (
+          <div className="empty" style={{padding: "40px 20px"}}>
+            <div className="empty-icon">📭</div>
+            <div className="empty-title">No payments found</div>
+            <div className="empty-desc">Try adjusting your filters or generate fees for the selected month</div>
+          </div>
+        )}
       </div>
     </div>
   );

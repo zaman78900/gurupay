@@ -51,56 +51,64 @@ export default function SetPaymentDueDateModal({ payment, onSave, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header" style={{background: "var(--gradient-primary)"}}>
-          <h2 className="modal-title">Set Due Date</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+      <div className="modal-backdrop" onClick={onClose}></div>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{maxWidth: 460}}>
+        <div className="modal-header" style={{background: "var(--gradient-primary)", borderRadius: "16px 16px 0 0", paddingBottom: 20, color: "white"}}>
+          <div style={{flex: 1}}>
+            <h2 className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 4}}>📅 Set Due Date</h2>
+            <div style={{fontSize: 13, color: "rgba(255,255,255,0.85)"}}>Configure payment deadline</div>
+          </div>
+          <button className="modal-close" onClick={onClose} style={{color: "white", fontSize: 24, fontWeight: "bold"}}>✕</button>
         </div>
 
         <div className="modal-content">
           <div style={{ marginBottom: 20 }}>
-            <label className="input-label">Select Due Date</label>
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>Select Due Date</label>
             <input
               type="date"
               className="input"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              style={{ marginBottom: 8 }}
+              style={{ marginBottom: 8, borderRadius: "10px" }}
             />
             {dueDate && (
-              <div className="input-hint">
-                {days > 0 ? `Due in ${days} days` : days === 0 ? "Due today" : `${Math.abs(days)} days overdue`}
+              <div className="input-hint" style={{color: days > 0 ? "var(--accent)" : days === 0 ? "var(--amber)" : "var(--red)", fontWeight: 600}}>
+                {days > 0 ? `✓ Due in ${days} days` : days === 0 ? "🔔 Due today" : `⚠️ ${Math.abs(days)} days overdue`}
               </div>
             )}
           </div>
 
           <div style={{ marginBottom: 20 }}>
-            <label className="input-label">Quick Presets</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>⚡ Quick Presets</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {presets.map((preset) => (
                 <button
                   key={preset.label}
                   onClick={() => applyPreset(preset.offset)}
                   style={{
-                    padding: "10px 12px",
+                    padding: "12px 14px",
                     border: "1.5px solid var(--border)",
-                    borderRadius: "var(--radius-sm)",
-                    background: "var(--bg3)",
+                    borderRadius: "10px",
+                    background: "linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(139, 92, 246, 0.04) 100%)",
                     cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: 500,
-                    color: "var(--text2)",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "var(--text)",
                     transition: "var(--transition-smooth)",
+                    position: "relative",
+                    overflow: "hidden"
                   }}
                   onMouseEnter={(e) => {
                     e.target.style.background = "var(--gradient-primary)";
                     e.target.style.color = "white";
                     e.target.style.border = "1.5px solid var(--blue)";
+                    e.target.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.3)";
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.background = "var(--bg3)";
-                    e.target.style.color = "var(--text2)";
+                    e.target.style.background = "linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(139, 92, 246, 0.04) 100%)";
+                    e.target.style.color = "var(--text)";
                     e.target.style.border = "1.5px solid var(--border)";
+                    e.target.style.boxShadow = "none";
                   }}
                 >
                   {preset.label}
@@ -112,25 +120,28 @@ export default function SetPaymentDueDateModal({ payment, onSave, onClose }) {
           {dueDate && (
             <div
               style={{
-                padding: "14px 12px",
-                background: "linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)",
-                borderRadius: "var(--radius-sm)",
+                padding: "16px 14px",
+                background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)",
+                borderRadius: "12px",
                 marginBottom: 16,
                 fontSize: "13px",
                 color: "var(--text2)",
+                border: "1px solid rgba(59, 130, 246, 0.2)",
+                fontWeight: 600
               }}
             >
-              <strong>Due Date:</strong> {fmtDate(dueDate)}
+              <div style={{marginBottom: 6}}>📅 Due Date</div>
+              <div style={{fontSize: 15, color: "var(--text)", fontWeight: 700}}>{fmtDate(dueDate)}</div>
             </div>
           )}
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-footer" style={{paddingTop: 16}}>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button
             className="btn btn-primary"
             onClick={handleSave}
-            style={{background: "var(--gradient-primary)"}}
+            style={{background: "var(--gradient-primary)", boxShadow: "0 6px 20px rgba(59, 130, 246, 0.3)"}}
           >
             Set Due Date
           </button>

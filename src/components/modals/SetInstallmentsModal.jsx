@@ -51,48 +51,67 @@ export default function SetInstallmentsModal({ payment, student, batch, onSave, 
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header" style={{background: "var(--gradient-success)"}}>
-          <h2 className="modal-title">Split into Installments</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+      <div className="modal-backdrop" onClick={onClose}></div>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{maxWidth: 480}}>
+        <div className="modal-header" style={{background: "var(--gradient-success)", borderRadius: "16px 16px 0 0", paddingBottom: 20, color: "white"}}>
+          <div style={{flex: 1}}>
+            <h2 className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 4}}>💳 Split into Installments</h2>
+            <div style={{fontSize: 13, color: "rgba(255,255,255,0.85)"}}>Create flexible payment plan</div>
+          </div>
+          <button className="modal-close" onClick={onClose} style={{color: "white", fontSize: 24, fontWeight: "bold"}}>✕</button>
         </div>
 
         <div className="modal-content">
           {/* Header */}
           <div
             style={{
-              padding: "14px",
-              background: "var(--bg3)",
-              borderRadius: "var(--radius-sm)",
+              padding: "14px 16px",
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)",
+              borderRadius: "12px",
               marginBottom: 20,
               fontSize: "13px",
+              border: "1px solid rgba(16, 185, 129, 0.2)",
+              fontWeight: 600
             }}
           >
-            <div style={{ marginBottom: 6 }}>
-              <strong>{student?.name}</strong> · {batch?.name}
+            <div style={{ marginBottom: 6, color: "var(--text)" }}>
+              👤 {student?.name}
             </div>
-            <div style={{ fontSize: "12px", color: "var(--text3)" }}>
-              Total: {fmtINR(payment.amount)}
+            <div style={{ fontSize: "12px", color: "var(--text4)", marginTop: 4 }}>
+              {batch?.name} • Total: <span style={{color: "var(--text)", fontWeight: 700, fontSize: 14}}>₹{(payment.amount).toLocaleString("en-IN")}</span>
             </div>
           </div>
 
           {/* Number of Installments */}
           <div className="input-group" style={{ marginBottom: 18 }}>
-            <label className="input-label">Number of Installments</label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>📊 Number of Installments</label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
               {[2, 3, 4, 6].map((num) => (
                 <button
                   key={num}
                   onClick={() => setNumInstallments(num)}
                   style={{
-                    padding: "10px",
-                    border: `2px solid ${numInstallments === num ? "var(--gradient-success)" : "var(--border)"}`,
-                    borderRadius: "var(--radius-sm)",
-                    background: numInstallments === num ? "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)" : "var(--bg3)",
+                    padding: "12px",
+                    border: `2px solid ${numInstallments === num ? "var(--accent)" : "var(--border)"}`,
+                    borderRadius: "10px",
+                    background: numInstallments === num ? "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.12) 100%)" : "linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(15, 23, 42, 0.04) 100%)",
                     cursor: "pointer",
-                    fontWeight: numInstallments === num ? 600 : 500,
-                    color: numInstallments === num ? "var(--accent)" : "var(--text2)",
+                    fontWeight: numInstallments === num ? 700 : 600,
+                    color: numInstallments === num ? "var(--accent)" : "var(--text)",
                     transition: "var(--transition-smooth)",
+                    fontSize: 14
+                  }}
+                  onMouseEnter={(e) => {
+                    if (numInstallments !== num) {
+                      e.target.style.borderColor = "var(--text4)";
+                      e.target.style.background = "linear-gradient(135deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0.06) 100%)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (numInstallments !== num) {
+                      e.target.style.borderColor = "var(--border)";
+                      e.target.style.background = "linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(15, 23, 42, 0.04) 100%)";
+                    }
                   }}
                 >
                   {num}
@@ -103,44 +122,46 @@ export default function SetInstallmentsModal({ payment, student, batch, onSave, 
 
           {/* Spacing */}
           <div className="input-group" style={{ marginBottom: 20 }}>
-            <label className="input-label">First Payment Offset (days)</label>
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>⏰ First Payment Offset</label>
             <select
               className="input"
               value={spacing}
               onChange={(e) => setSpacing(+e.target.value)}
+              style={{borderRadius: "10px"}}
             >
               <option value={7}>7 days from now</option>
               <option value={14}>14 days from now</option>
-              <option value={30}>30 days from now (Default)</option>
+              <option value={30}>30 days from now</option>
             </select>
           </div>
 
           {/* Installment Breakdown */}
           <div style={{ marginBottom: 16 }}>
-            <label className="input-label">Installment Schedule</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>📅 Installment Schedule</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 250, overflowY: "auto", paddingRight: 4 }}>
               {installments.map((inst, idx) => (
                 <div
                   key={idx}
                   style={{
                     padding: "12px 14px",
-                    background: "var(--bg3)",
-                    borderLeft: "3px solid var(--gradient-success)",
-                    borderRadius: "0 var(--radius-sm) var(--radius-sm) 0",
+                    background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)",
+                    borderLeft: "4px solid var(--accent)",
+                    borderRadius: "10px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                     fontSize: "13px",
+                    border: "1px solid rgba(16, 185, 129, 0.2)"
                   }}
                 >
                   <div>
-                    <strong>Installment {inst.installmentNumber}</strong>
-                    <div style={{ fontSize: "11px", color: "var(--text4)", marginTop: 2 }}>
-                      Due: {fmtDate(inst.dueDate)}
+                    <strong style={{color: "var(--text)"}}>📦 EMI {inst.installmentNumber}</strong>
+                    <div style={{ fontSize: "11px", color: "var(--text4)", marginTop: 3 }}>
+                      {fmtDate(inst.dueDate)}
                     </div>
                   </div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--accent)" }}>
-                    {fmtINR(inst.amount)}
+                  <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--accent)", fontSize: 14 }}>
+                    ₹{inst.amount.toLocaleString("en-IN")}
                   </div>
                 </div>
               ))}
@@ -150,31 +171,33 @@ export default function SetInstallmentsModal({ payment, student, batch, onSave, 
           {/* Total Check */}
           <div
             style={{
-              padding: "12px 14px",
-              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%)",
-              borderRadius: "var(--radius-sm)",
+              padding: "14px 16px",
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)",
+              borderRadius: "12px",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               fontSize: "13px",
-              marginBottom: 16,
+              marginBottom: 0,
+              border: "1px solid rgba(16, 185, 129, 0.2)",
+              fontWeight: 700
             }}
           >
-            <strong>Total</strong>
-            <div style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--accent)" }}>
-              {fmtINR(totalAmount)}
+            <div style={{color: "var(--text)"}}>Total Amount</div>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--accent)", fontSize: 15 }}>
+              ₹{totalAmount.toLocaleString("en-IN")}
             </div>
           </div>
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-footer" style={{paddingTop: 16}}>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button
             className="btn btn-primary"
             onClick={handleSave}
-            style={{background: "var(--gradient-success)"}}
+            style={{background: "var(--gradient-success)", boxShadow: "0 6px 20px rgba(16, 185, 129, 0.3)"}}
           >
-            Create {numInstallments} Installments
+            Create {numInstallments} EMIs
           </button>
         </div>
       </div>

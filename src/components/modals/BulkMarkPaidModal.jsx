@@ -47,54 +47,72 @@ export default function BulkMarkPaidModal({ payments, students, batches, selecte
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header" style={{background: "var(--gradient-primary)"}}>
-          <h2 className="modal-title">Mark as Paid</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+      <div className="modal-backdrop" onClick={onClose}></div>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{maxWidth: 500}}>
+        <div className="modal-header" style={{background: "var(--gradient-success)", borderRadius: "16px 16px 0 0", paddingBottom: 20, color: "white"}}>
+          <div style={{flex: 1}}>
+            <h2 className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 4}}>✅ Mark as Paid</h2>
+            <div style={{fontSize: 13, color: "rgba(255,255,255,0.85)"}}>Process multiple payments at once</div>
+          </div>
+          <button className="modal-close" onClick={onClose} style={{color: "white", fontSize: 24, fontWeight: "bold"}}>✕</button>
         </div>
 
         <div className="modal-content">
           {/* Date Input */}
-          <div className="input-group" style={{ marginBottom: 18 }}>
-            <label className="input-label">Payment Date (for all selected)</label>
+          <div className="input-group" style={{ marginBottom: 20 }}>
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>📅 Payment Date (for all selected)</label>
             <input
               type="date"
               className="input"
               value={paidDate}
               onChange={(e) => setPaidDate(e.target.value)}
+              style={{borderRadius: "10px"}}
             />
           </div>
 
           {/* Select All */}
           <div
             style={{
-              padding: "12px 14px",
-              background: "var(--bg3)",
-              borderRadius: "var(--radius-sm)",
-              marginBottom: 12,
+              padding: "14px 16px",
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)",
+              borderRadius: "12px",
+              marginBottom: 14,
               display: "flex",
               alignItems: "center",
-              gap: 10,
+              gap: 12,
               cursor: "pointer",
+              border: "1px solid rgba(16, 185, 129, 0.2)",
+              transition: "var(--transition-smooth)"
             }}
             onClick={selectAll}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.12) 100%)";
+              e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)";
+              e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.2)";
+            }}
           >
             <input
               type="checkbox"
               checked={selected.size === payments.length && payments.length > 0}
               onChange={selectAll}
-              style={{ cursor: "pointer" }}
+              style={{ cursor: "pointer", width: 18, height: 18, accentColor: "var(--accent)" }}
             />
             <div style={{ flex: 1 }}>
-              <strong>Select All</strong>
-              <div style={{ fontSize: "11px", color: "var(--text4)" }}>
-                {selected.size} of {payments.length} payments selected
+              <div style={{fontWeight: 700, fontSize: 13, color: "var(--text)"}}>Select All Payments</div>
+              <div style={{ fontSize: "11px", color: "var(--text4)", marginTop: 2 }}>
+                {selected.size} of {payments.length} selected
               </div>
+            </div>
+            <div style={{fontWeight: 700, fontSize: 12, color: "var(--accent)"}}>
+              {selected.size > 0 && `${selected.size}/${payments.length}`}
             </div>
           </div>
 
           {/* Payments List */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "300px", overflowY: "auto", marginBottom: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "320px", overflowY: "auto", marginBottom: 16, paddingRight: 4 }}>
             {payments.map((payment) => {
               const student = getStudent(payment.studentId);
               const batch = getBatch(student?.batchId);
@@ -105,42 +123,54 @@ export default function BulkMarkPaidModal({ payments, students, batches, selecte
                   key={payment.id}
                   onClick={() => toggleSelect(payment.id)}
                   style={{
-                    padding: "12px 14px",
+                    padding: "14px 16px",
                     background: isSelected
-                      ? "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)"
-                      : "var(--bg3)",
-                    border: `2px solid ${isSelected ? "var(--blue)" : "var(--border)"}`,
-                    borderRadius: "var(--radius-sm)",
+                      ? "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.12) 100%)"
+                      : "linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(15, 23, 42, 0.04) 100%)",
+                    border: `2px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                    borderRadius: "11px",
                     cursor: "pointer",
                     transition: "var(--transition-smooth)",
                     display: "flex",
                     alignItems: "center",
-                    gap: 10,
+                    gap: 12,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = "var(--text4)";
+                      e.currentTarget.style.background = "linear-gradient(135deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0.06) 100%)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                      e.currentTarget.style.background = "linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(15, 23, 42, 0.04) 100%)";
+                    }
                   }}
                 >
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleSelect(payment.id)}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: "pointer", width: 18, height: 18, accentColor: "var(--accent)" }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500, fontSize: "13px" }}>
+                    <div style={{ fontWeight: 700, fontSize: "13px", color: "var(--text)" }}>
                       {student?.name}
                     </div>
-                    <div style={{ fontSize: "11px", color: "var(--text4)" }}>
+                    <div style={{ fontSize: "11px", color: "var(--text4)", marginTop: 2 }}>
                       {batch?.name}
                     </div>
                   </div>
                   <div
                     style={{
-                      fontFamily: "var(--font-mono)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      color: isSelected ? "var(--blue)" : "var(--text)",
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 800,
+                      fontSize: "14px",
+                      color: isSelected ? "var(--accent)" : "var(--text)",
                     }}
                   >
-                    {fmtINR(payment.amount)}
+                    ₹{(payment.amount).toLocaleString("en-IN")}
                   </div>
                 </div>
               );
@@ -151,35 +181,35 @@ export default function BulkMarkPaidModal({ payments, students, batches, selecte
           {selected.size > 0 && (
             <div
               style={{
-                padding: "12px 14px",
-                background: "linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)",
-                borderRadius: "var(--radius-sm)",
+                padding: "16px",
+                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)",
+                borderRadius: "12px",
                 marginBottom: 16,
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                fontSize: "13px",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
               }}
             >
-              <div>
-                <strong>{selected.size} payments selected</strong>
+              <div style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>
+                💰 {selected.size} payment{selected.size !== 1 ? 's' : ''} selected
               </div>
-              <div style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--blue)" }}>
-                {fmtINR(selectedAmount)}
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--accent)", fontSize: 16 }}>
+                ₹{selectedAmount.toLocaleString("en-IN")}
               </div>
             </div>
           )}
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-footer" style={{paddingTop: 16}}>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button
             className="btn btn-primary"
             onClick={handleSave}
             disabled={selected.size === 0}
-            style={{background: "var(--gradient-primary)", opacity: selected.size === 0 ? 0.5 : 1}}
+            style={{background: "var(--gradient-success)", boxShadow: selected.size > 0 ? "0 6px 20px rgba(16, 185, 129, 0.3)" : "none", opacity: selected.size === 0 ? 0.5 : 1}}
           >
-            Mark {selected.size} as Paid
+            ✓ Mark {selected.size} as Paid
           </button>
         </div>
       </div>
