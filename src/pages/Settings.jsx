@@ -70,7 +70,6 @@ function FeaturesPanel({ D, accentColor, features = {}, setFeatures }) {
     ["showPayments", "Fee Tracking", "Show/hide fee tracking modules"],
     ["showStudents", "Batches & Students", "Enable batch and student screens"],
     ["showReports", "Reports", "Enable reports and analytics pages"],
-    ["showAttendance", "Attendance Tracking", "Use attendance related flows"],
     ["enableNotifications", "Notifications", "Enable alerts and reminders"],
     ["enableDarkMode", "Theme Toggle", "Allow switching dark/light mode"],
     ["enableWaiveFee", "Waive Fee", "Allow fee waive operations"],

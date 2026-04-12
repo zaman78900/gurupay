@@ -4,8 +4,6 @@ import Login from './Login'
 import { ensureUserProfile, fetchOwnProfile } from './lib/authProfile'
 import FeeSyncSettings from './pages/Settings';
 import BatchDetails from './components/BatchDetails';
-import AttendancePage from './pages/Attendance';
-import PaymentHistoryPage from './pages/PaymentHistory';
 import html2canvas from "html2canvas";
 import { 
   fetchBatches, createBatch, updateBatch, deleteBatch as deleteBatchFromDb,
@@ -392,7 +390,7 @@ function normalizeInstituteProfile(profile) {
 }
 
 // Default feature settings
-const DEFAULT_FEATURES = { showStudents: true, showAttendance: true, showPayments: true, showReports: true, enableNotifications: true, enableDarkMode: true, enableWaiveFee: true, enableGST: true, enableWhatsApp: true };
+const DEFAULT_FEATURES = { showStudents: true, showPayments: true, showReports: true, enableNotifications: true, enableDarkMode: true, enableWaiveFee: true, enableGST: true, enableWhatsApp: true };
 const DEFAULT_WHATSAPP_CONFIG = { mode: "default", customTemplate: "" };
 const DEFAULT_UI_SETTINGS = { colorTheme: "Default Green", fontSize: "Medium" };
 
@@ -1245,62 +1243,6 @@ function ReceiptModal({ student, batch, payment, profile, toast, onClose }) {
   );
 }
 
-// ─── Student History Modal ────────────────────────────────────────────────────
-function StudentHistoryModal({ student, batches, payments, onClose }) {
-  const batch = batches.find(b => b.id === student.batchId);
-  const hist = months6.map(m => ({
-    month: m,
-    payment: payments.find(p => p.studentId === student.id && p.month === m),
-  }));
-  const paid = hist.filter(h => h.payment?.status === "paid").length;
-  const rate = hist.filter(h => h.payment).length ? Math.round(paid / hist.filter(h => h.payment).length * 100) : 0;
-  return (
-    <div className="modal-overlay">
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-box" style={{ maxWidth: 460 }}>
-        <div className="modal-header">
-          <div>
-            <div className="modal-title">👤 {student.name}</div>
-            <div className="modal-subtitle">{batch?.name} · Joined {fmtDate(student.joiningDate)}</div>
-          </div>
-          <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}><I.X /></button>
-        </div>
-        <div className="modal-body">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
-            {[["On-time Rate", `${rate}%`, rate >= 80 ? "var(--accent)" : rate >= 50 ? "var(--amber)" : "var(--red)"],
-              ["Paid Months", paid, "var(--accent)"],
-              ["Discount", student.discount ? fmtINR(student.discount) : "None", "var(--amber)"]].map(([l, v, c]) => (
-              <div key={l} style={{ background: "var(--bg3)", borderRadius: "var(--radius-sm)", padding: "12px", textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: c }}>{v}</div>
-                <div style={{ fontSize: 11, color: "var(--text4)", marginTop: 3 }}>{l}</div>
-              </div>
-            ))}
-          </div>
-          {student.notes && <div style={{ background: "var(--amber-light)", border: "1px solid rgba(217,119,6,.2)", borderRadius: "var(--radius-sm)", padding: "10px 12px", fontSize: 12.5, color: "var(--amber)", marginBottom: 14 }}>📝 {student.notes}</div>}
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10, color: "var(--text)" }}>Payment History (Last 6 Months)</div>
-          {hist.map(({ month, payment }) => (
-            <div key={month} className="hist-item">
-              <div style={{ fontSize: 13, fontWeight: 500 }}>{monthLabel(month)}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {payment ? (
-                  <>
-                    {payment.lateFee > 0 && <span style={{ fontSize: 11, color: "var(--amber)" }}>+₹{payment.lateFee} late</span>}
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600 }}>{fmtINR(payment.amount + (payment.lateFee || 0))}</span>
-                    <span className={`badge ${payment.status === "paid" ? "badge-paid" : "badge-unpaid"}`}>{payment.status === "paid" ? "Paid" : "Due"}</span>
-                  </>
-                ) : <span style={{ fontSize: 12, color: "var(--text4)" }}>Not generated</span>}
-              </div>
-            </div>
-          ))}
-          <div style={{ marginTop: 14, fontSize: 12, color: "var(--text4)", textAlign: "center" }}>
-            📱 {student.phone} · {student.email || "No email"}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Student Form Modal ───────────────────────────────────────────────────────
 function StudentModal({ student, batches, onSave, onClose, defaultBatchId }) {
   const [f, setF] = useState(student || { rollNumber: "", status: "Active", name: "", phone: "", email: "", batchId: defaultBatchId || batches[0]?.id || "", joiningDate: today(), notes: "", discount: 0 });
@@ -1822,7 +1764,6 @@ function FeesTab({ batches, students, payments, setPayments, selectedMonth, setS
                             <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("markPaid", { payment: p, student: s, batch: b })} title="Mark as paid">✅</button>
                           </>
                         )}
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("studentHistory", s)} title="View history"><I.History /></button>
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("editStudent", s)} title="Edit"><I.Edit /></button>
                         <button className="btn btn-ghost btn-icon btn-sm" style={{ color: "var(--red)" }} onClick={() => { 
                           console.log('[DEBUG] Delete student clicked:', s.name); 
@@ -2062,7 +2003,6 @@ function BatchesTab({ user, batches, setBatches, students, setStudents, payments
                     <td>{p ? <span className={`badge ${p.status === "paid" ? "badge-paid" : p.status === "waived" ? "badge-waived" : "badge-unpaid"}`}>{p.status === "paid" ? "Paid" : p.status === "waived" ? "Waived" : "Due"}</span> : <span style={{ fontSize: 12, color: "var(--text4)"}}>—</span>}</td>
                     <td>
                       <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("studentHistory", s)} title="View history"><I.History /></button>
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("editStudent", s)} title="Edit"><I.Edit /></button>
                         <button className="btn btn-ghost btn-icon btn-sm" style={{ color: "var(--red)" }} onClick={() => { 
                           console.log('[DEBUG] Delete student clicked:', s.name); 
@@ -2299,8 +2239,7 @@ function FeeSyncPro({ user, authProfile }) {
   const [features, setFeatures] = useState(DEFAULT_FEATURES);
   const [whatsappConfig, setWhatsappConfig] = useState(DEFAULT_WHATSAPP_CONFIG);
   const [uiSettings, setUiSettings] = useState(DEFAULT_UI_SETTINGS);
-  const [attendanceData, setAttendanceData] = useState([]);
-  const [auditLogs] = useState([]);
+
   const [selectedBatch, setSelectedBatch] = useState(null);
   const { toasts, push: toast, dismiss } = useToast();
 
@@ -2486,8 +2425,7 @@ function FeeSyncPro({ user, authProfile }) {
     if (
       (tab === "fees" && !features.showPayments) ||
       (tab === "batches" && !features.showStudents) ||
-      (tab === "reports" && !features.showReports) ||
-      (tab === "attendance" && !features.showAttendance)
+      (tab === "reports" && !features.showReports)
     ) {
       setTab("dashboard");
     }
@@ -2730,27 +2668,17 @@ function FeeSyncPro({ user, authProfile }) {
     await supabase.auth.signOut();
   };
 
-  const handleAddAttendance = (record) => {
-    setAttendanceData((prev) => {
-      const next = prev.filter((x) => !(x.studentId === record.studentId && x.date === record.date));
-      next.push(record);
-      return next;
-    });
-  };
-
   const unpaidCount = payments.filter(p => p.month === curMonth && p.status === "unpaid").length;
 
   const NAV = [
     ["dashboard", "Dashboard", <I.Dashboard />, 0],
     ...(features.showPayments ? [["fees", "Fee Tracking", <I.Fees />, unpaidCount]] : []),
     ...(features.showStudents ? [["batches", "Batches & Students", <I.Batches />, 0]] : []),
-    ...(features.showAttendance ? [["attendance", "Attendance", <I.Check />, 0]] : []),
     ...(features.showReports ? [["reports", "Reports", <I.Reports />, 0]] : []),
-    ["history", "History", <I.History />, 0],
     ["settings", "Settings", <I.Settings />, 0],
   ];
 
-  const PAGE_TITLES = { dashboard: "Dashboard", fees: "Fee Tracking", batches: "Batches & Students", attendance: "Attendance", reports: "Reports & Analytics", history: "Payment History", settings: "Settings" };
+  const PAGE_TITLES = { dashboard: "Dashboard", fees: "Fee Tracking", batches: "Batches & Students", reports: "Reports & Analytics", settings: "Settings" };
   const safeProfileName = String(profile?.name || SEED_PROFILE.name || "FeeSync").trim() || "FeeSync";
 
   if (loading) return (
@@ -2771,7 +2699,6 @@ function FeeSyncPro({ user, authProfile }) {
       {/* Modals */}
       {modal?.type === "wa" && <WaModal student={modal.data.student} batch={modal.data.batch} month={selectedMonth} whatsappConfig={whatsappConfig} onSaveWhatsAppConfig={setWhatsappConfig} onClose={closeModal} />}
       {modal?.type === "receipt" && <ReceiptModal {...modal.data} profile={profile} toast={toast} onClose={closeModal} />}
-      {modal?.type === "studentHistory" && <StudentHistoryModal student={modal.data} batches={batches} payments={payments} onClose={closeModal} />}
       {modal?.type === "addStudent" && <StudentModal batches={batches} defaultBatchId={modal.data?.batchId} onSave={saveStudent} onClose={closeModal} />}
       {modal?.type === "editStudent" && <StudentModal student={modal.data} batches={batches} onSave={saveStudent} onClose={closeModal} />}
       {modal?.type === "addBatch" && <BatchModal onSave={saveBatch} onClose={closeModal} />}
@@ -2858,9 +2785,7 @@ function FeeSyncPro({ user, authProfile }) {
             {tab === "dashboard" && <DashboardTab {...commonProps} />}
             {tab === "fees" && <FeesTab {...commonProps} setPayments={setPayments} deleteStudent={deleteStudent} />}
             {tab === "batches" && <BatchesTab user={user} batches={batches} setBatches={setBatches} students={students} setStudents={setStudents} payments={payments} setPayments={setPayments} toast={toast} openModal={openModal} selectedBatch={selectedBatch} setSelectedBatch={setSelectedBatch} profile={profile} />}
-            {tab === "attendance" && <AttendancePage batches={batches} students={students} attendanceData={attendanceData} onAddAttendance={handleAddAttendance} onUpdateAttendance={handleAddAttendance} />}
             {tab === "reports" && <ReportsTab batches={batches} students={students} payments={payments} />}
-            {tab === "history" && <PaymentHistoryPage payments={payments} students={students} auditLogs={auditLogs} />}
             {tab === "settings" && <FeeSyncSettings embedded={true} profile={profile} setProfile={setProfile} features={features} setFeatures={setFeatures} theme={theme} setTheme={setTheme} uiSettings={uiSettings} setUiSettings={setUiSettings} batches={batches} students={students} payments={payments} toast={toast} user={user} />}
           </div>
 
