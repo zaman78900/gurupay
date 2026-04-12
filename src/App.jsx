@@ -2688,7 +2688,18 @@ function FeeSyncPro({ user, authProfile }) {
   // Mark paid handler
   const handleMarkPaid = async (payment, { paidOn, lateFee, notes, amount }) => {
     const prev = [...payments];
-    const updatedPayment = { ...payment, status: "paid", paidOn, paidAt: new Date().toISOString(), lateFee, notes, amount };
+    // When payment is marked as paid, clear all reminders (no need to send them)
+    const updatedPayment = { 
+      ...payment, 
+      status: "paid", 
+      paidOn, 
+      paidAt: new Date().toISOString(), 
+      lateFee, 
+      notes, 
+      amount,
+      reminders: [], // Clear reminders when paid
+      reminderScheduledAt: null // Clear scheduled time
+    };
     const np = payments.map(p => p.id === payment.id ? updatedPayment : p);
     setPayments(np); await dbSet(KEYS.payments, np);
     
@@ -2697,7 +2708,7 @@ function FeeSyncPro({ user, authProfile }) {
       await updatePayment(user.id, updatedPayment).catch(console.error);
     }
     
-    toast("Fee marked as paid!", { icon: "✅", onUndo: async () => { setPayments(prev); await dbSet(KEYS.payments, prev); } });
+    toast("✅ Fee marked as paid! Reminders cancelled.", { icon: "✅", onUndo: async () => { setPayments(prev); await dbSet(KEYS.payments, prev); } });
   };
 
   // Set due date handler
@@ -2720,7 +2731,14 @@ function FeeSyncPro({ user, authProfile }) {
     const paidAt = new Date().toISOString();
     const np = payments.map(p =>
       selectedPayments.some(sp => sp.id === p.id)
-        ? { ...p, status: "paid", paidOn: paidDate, paidAt }
+        ? { 
+            ...p, 
+            status: "paid", 
+            paidOn: paidDate, 
+            paidAt,
+            reminders: [], // Clear reminders when paid
+            reminderScheduledAt: null // Clear scheduled time
+          }
         : p
     );
 
@@ -2730,12 +2748,19 @@ function FeeSyncPro({ user, authProfile }) {
     // Also update in Supabase if user is logged in
     if (user?.id) {
       for (const payment of selectedPayments) {
-        const updated = { ...payment, status: "paid", paidOn: paidDate, paidAt };
+        const updated = { 
+          ...payment, 
+          status: "paid", 
+          paidOn: paidDate, 
+          paidAt,
+          reminders: [],
+          reminderScheduledAt: null
+        };
         await updatePayment(user.id, updated).catch(console.error);
       }
     }
 
-    toast(`${selectedPayments.length} payment${selectedPayments.length !== 1 ? 's' : ''} marked as paid!`, {
+    toast(`✅ ${selectedPayments.length} payment${selectedPayments.length !== 1 ? 's' : ''} marked as paid! Reminders cancelled.`, {
       icon: "✅",
       onUndo: async () => { setPayments(prevPayments); await dbSet(KEYS.payments, prevPayments); }
     });
@@ -2809,7 +2834,7 @@ function FeeSyncPro({ user, authProfile }) {
       {modal?.type === "markPaid" && <MarkPaidModal {...modal.data} onSave={(opts) => handleMarkPaid(modal.data.payment || { id: uid(), studentId: modal.data.student.id, month: selectedMonth, status: "unpaid" }, opts)} onClose={closeModal} />}
       {modal?.type === "waive" && <WaiveModal student={modal.data.student} batch={modal.data.batch} onSave={async (reason) => {
         const p = modal.data.payment || payments.find(pm => pm.studentId === modal.data.student.id && pm.month === selectedMonth);
-        if (p) { const np = payments.map(pm => pm.id === p.id ? { ...pm, status: "waived", notes: reason, paidAt: pm.paidAt || new Date().toISOString() } : pm); setPayments(np); await dbSet(KEYS.payments, np); toast("Fee waived!", { icon: "🔵" }); }
+        if (p) { const np = payments.map(pm => pm.id === p.id ? { ...pm, status: "waived", notes: reason, paidAt: pm.paidAt || new Date().toISOString(), reminders: [], reminderScheduledAt: null } : pm); setPayments(np); await dbSet(KEYS.payments, np); toast("✅ Fee waived! Reminders cancelled.", { icon: "🔵" }); }
       }} onClose={closeModal} />}
       {modal?.type === "setDueDate" && <SetPaymentDueDateModal payment={modal.data.payment} onSave={handleSetDueDate} onClose={closeModal} />}
       {modal?.type === "bulkMarkPaid" && <BulkMarkPaidModal payments={modal.data.payments || []} students={students} batches={batches} selectedMonth={selectedMonth} onSave={handleBulkMarkPaid} onClose={closeModal} />}
