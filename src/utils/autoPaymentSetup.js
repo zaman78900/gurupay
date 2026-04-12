@@ -4,6 +4,45 @@
  */
 
 /**
+ * Calculate due date based on student's preference
+ * Used for recurring monthly payments
+ * @param {string} preference - Preference type ('lastDay', '15', '20', '25', 'endOfWeek')
+ * @param {Date} forDate - Date to calculate due date for (defaults to today)
+ * @returns {string} Date in YYYY-MM-DD format
+ */
+export function calculateDueDateFromPreference(preference = 'lastDay', forDate = new Date()) {
+  let dueDate = new Date(forDate);
+  
+  if (preference === 'lastDay') {
+    // Last day of the month
+    dueDate = new Date(dueDate.getFullYear(), dueDate.getMonth() + 1, 0);
+  } else if (preference === 'endOfWeek') {
+    // Next Friday (end of week)
+    const day = dueDate.getDay();
+    const diff = 5 - day; // 5 = Friday
+    if (diff <= 0) {
+      dueDate.setDate(dueDate.getDate() + (diff + 7));
+    } else {
+      dueDate.setDate(dueDate.getDate() + diff);
+    }
+  } else if (!isNaN(preference)) {
+    // Fixed day of month (e.g., '15', '20', '25')
+    const dayOfMonth = parseInt(preference, 10);
+    dueDate.setDate(dayOfMonth);
+    // If the date has already passed this month, move to next month
+    if (dueDate < new Date()) {
+      dueDate.setMonth(dueDate.getMonth() + 1);
+      dueDate.setDate(dayOfMonth);
+    }
+  }
+  
+  const yyyy = dueDate.getFullYear();
+  const mm = String(dueDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(dueDate.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
  * Calculate automatic due date for a payment
  * @param {string} presetType - 'daysFromNow', 'endOfMonth'
  * @param {number} days - Number of days from now (for 'daysFromNow')
