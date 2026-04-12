@@ -1,1 +1,0 @@
-function FeesTab({ batches, students, payments, setPayments, selectedMonth, setSelectedMonth, toast, openModal, profile }

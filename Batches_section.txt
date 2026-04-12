@@ -1,1 +1,0 @@
-function BatchesTab({ batches, setBatches, students, setStudents, payments, setPayments, toast, openModal, selectedBatch, setSelectedBatch }

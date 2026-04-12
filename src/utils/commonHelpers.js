@@ -46,6 +46,9 @@ export const getLast6Months = () =>
 
 export const getCurrentMonth = () => monthKey();
 
+// Current month constant (YYYY-MM format)
+export const curMonth = monthKey();
+
 // UUID-like ID generator (not cryptographically secure, just for local IDs)
 export const generateId = () => Math.random().toString(36).slice(2, 9);
 
