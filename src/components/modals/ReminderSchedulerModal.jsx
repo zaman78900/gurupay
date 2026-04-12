@@ -53,49 +53,54 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-backdrop" onClick={onClose}></div>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{maxWidth: 480}}>
-        <div className="modal-header" style={{background: "var(--gradient-warning)", borderRadius: "16px 16px 0 0", paddingBottom: 20, color: "white"}}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{maxWidth: 500, borderRadius: "16px", boxShadow: "0 20px 64px rgba(0,0,0,0.15)", overflow: "hidden"}}>
+        <div className="modal-header" style={{background: "linear-gradient(135deg, var(--amber) 0%, var(--orange) 100%)", paddingBottom: 20, paddingTop: 24, color: "white"}}>
           <div style={{flex: 1}}>
-            <h2 className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 4}}>🔔 Schedule Reminders</h2>
-            <div style={{fontSize: 13, color: "rgba(255,255,255,0.85)"}}>Set payment reminders</div>
+            <h2 className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 6, fontWeight: 700}}>🔔 Schedule Payment Reminders</h2>
+            <div style={{fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: 500}}>Automatic WhatsApp notifications</div>
           </div>
-          <button className="modal-close" onClick={onClose} style={{color: "white", fontSize: 24, fontWeight: "bold"}}>✕</button>
+          <button className="modal-close" onClick={onClose} style={{color: "white", fontSize: 24, fontWeight: "bold", background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "8px", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s"}} onMouseEnter={(e) => { e.target.style.background = "rgba(255,255,255,0.3)"; }} onMouseLeave={(e) => { e.target.style.background = "rgba(255,255,255,0.2)"; }}>✕</button>
         </div>
 
-        <div className="modal-content">
-          {/* Header */}
+        <div className="modal-content" style={{padding: "24px", background: "var(--bg2)"}}>
+          {/* Payment Info Card */}
           <div
             style={{
               padding: "14px 16px",
               background: "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%)",
               borderRadius: "12px",
-              marginBottom: 20,
+              marginBottom: 24,
               fontSize: "13px",
-              border: "1px solid rgba(217, 119, 6, 0.2)",
+              border: "1.5px solid rgba(217, 119, 6, 0.2)",
               fontWeight: 600
             }}
           >
-            <div style={{ marginBottom: 6, color: "var(--text)" }}>
-              📌 {student?.name}
+            <div style={{ marginBottom: 8, color: "var(--text)", fontWeight: 700 }}>
+              👤 {student?.name}
             </div>
-            <div style={{ fontSize: "12px", color: "var(--text4)", marginTop: 4 }}>
-              Batch: {batch?.name} • Due: {payment?.dueDate ? new Date(payment.dueDate).toLocaleDateString("en-IN") : "Not set"}
+            <div style={{ fontSize: "12px", color: "var(--text3)", marginTop: 2 }}>
+              Batch: <span style={{fontWeight: 700, color: "var(--text)"}}>{batch?.name}</span>
             </div>
+            {payment?.dueDate && (
+              <div style={{ fontSize: "12px", color: "var(--text3)", marginTop: 2 }}>
+                Due: <span style={{fontWeight: 700, color: "var(--amber)"}}>{new Date(payment.dueDate).toLocaleDateString("en-IN")}</span>
+              </div>
+            )}
           </div>
 
-          {/* Enable Toggle */}
+          {/* Reminder Toggle */}
           <div
             style={{
               padding: "14px 16px",
               background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.08) 100%)",
               borderRadius: "12px",
-              marginBottom: 20,
+              marginBottom: 24,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               cursor: "pointer",
-              border: "1px solid rgba(217, 119, 6, 0.2)",
-              transition: "var(--transition-smooth)"
+              border: "1.5px solid rgba(217, 119, 6, 0.2)",
+              transition: "all 0.2s ease"
             }}
             onClick={() => setReminderEnabled(!reminderEnabled)}
             onMouseEnter={(e) => {
@@ -106,9 +111,9 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
             }}
           >
             <div>
-              <strong style={{ fontSize: "13px", color: "var(--text)", display: "flex", alignItems: "center", gap: 6 }}>🔔 Enable Reminders</strong>
-              <div style={{ fontSize: "11px", color: "var(--text4)", marginTop: 4 }}>
-                Automatic WhatsApp reminders
+              <strong style={{ fontSize: "13px", color: "var(--text)", display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>🔔 Enable Reminders</strong>
+              <div style={{ fontSize: "11px", color: "var(--text3)", marginTop: 4, fontWeight: 500 }}>
+                Send WhatsApp notifications before due date
               </div>
             </div>
             <div
@@ -117,11 +122,12 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
                 height: 28,
                 background: reminderEnabled ? "var(--amber)" : "var(--bg4)",
                 borderRadius: 99,
-                transition: "var(--transition-smooth)",
+                transition: "all 0.3s ease",
                 display: "flex",
                 alignItems: "center",
                 padding: "2px",
-                flexShrink: 0
+                flexShrink: 0,
+                boxShadow: reminderEnabled ? "0 4px 12px rgba(217, 119, 6, 0.25)" : "none"
               }}
             >
               <div
@@ -130,7 +136,7 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
                   height: 24,
                   background: "white",
                   borderRadius: 50,
-                  transition: "var(--transition-smooth)",
+                  transition: "all 0.3s ease",
                   transform: reminderEnabled ? "translateX(22px)" : "translateX(0)",
                 }}
               />
@@ -139,9 +145,9 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
 
           {reminderEnabled && (
             <>
-              {/* Add Reminder */}
-              <div className="input-group" style={{ marginBottom: 18 }}>
-                <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>+ Add Reminder</label>
+              {/* Add Reminder Section */}
+              <div style={{ marginBottom: 20 }}>
+                <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13, marginBottom: 10, display: "block"}}>+ Add Reminder Timing</label>
                 <div
                   style={{
                     display: "flex",
@@ -152,7 +158,7 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
                     className="input"
                     value={reminderOffset}
                     onChange={(e) => setReminderOffset(+e.target.value)}
-                    style={{ flex: 1, borderRadius: "10px" }}
+                    style={{ flex: 1, borderRadius: "10px", borderWidth: "1.5px", padding: "10px 12px", fontSize: 13 }}
                   >
                     {reminderOptions.map((opt) => (
                       <option key={opt.offset} value={opt.offset}>
@@ -163,36 +169,37 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
                   <button
                     onClick={addReminder}
                     style={{
-                      padding: "9px 16px",
-                      background: "var(--gradient-warning)",
+                      padding: "10px 18px",
+                      background: "linear-gradient(135deg, var(--amber) 0%, var(--orange) 100%)",
                       color: "white",
                       border: "none",
                       borderRadius: "10px",
                       cursor: "pointer",
                       fontWeight: 700,
                       fontSize: "13px",
-                      transition: "var(--transition-smooth)",
+                      transition: "all 0.2s ease",
                       boxShadow: "0 4px 12px rgba(217, 119, 6, 0.25)",
-                      whiteSpace: "nowrap"
+                      whiteSpace: "nowrap",
+                      flexShrink: 0
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.transform = "translateY(-2px)";
-                      e.target.style.boxShadow = "0 6px 16px rgba(217, 119, 6, 0.35)";
+                      e.target.style.boxShadow = "0 6px 18px rgba(217, 119, 6, 0.35)";
                     }}
                     onMouseLeave={(e) => {
                       e.target.style.transform = "translateY(0)";
                       e.target.style.boxShadow = "0 4px 12px rgba(217, 119, 6, 0.25)";
                     }}
                   >
-                    Add
+                    ＋ Add
                   </button>
                 </div>
               </div>
 
               {/* Scheduled Reminders List */}
-              {reminders.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>📅 Scheduled Reminders ({reminders.length})</label>
+              {reminders.length > 0 ? (
+                <div style={{ marginBottom: 20 }}>
+                  <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13, marginBottom: 10, display: "block"}}>📋 Scheduled Reminders ({reminders.length})</label>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {reminders.map((reminder) => (
                       <div
@@ -206,13 +213,14 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
                           justifyContent: "space-between",
                           alignItems: "center",
                           fontSize: "13px",
-                          border: "1px solid rgba(217, 119, 6, 0.2)"
+                          border: "1px solid rgba(217, 119, 6, 0.2)",
+                          transition: "all 0.2s ease"
                         }}
                       >
                         <div>
-                          <strong style={{color: "var(--text)"}}>{getReminderLabel(reminder.offset)}</strong>
-                          <div style={{ fontSize: "11px", color: "var(--text4)", marginTop: 3 }}>
-                            {fmtDateTime(reminder.scheduledAt)}
+                          <strong style={{color: "var(--text)", fontWeight: 700}}>{getReminderLabel(reminder.offset)}</strong>
+                          <div style={{ fontSize: "11px", color: "var(--text3)", marginTop: 4, fontWeight: 500 }}>
+                            ⏰ {fmtDateTime(reminder.scheduledAt)}
                           </div>
                         </div>
                         <button
@@ -226,8 +234,9 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
                             cursor: "pointer",
                             fontSize: "11px",
                             fontWeight: 700,
-                            transition: "var(--transition-smooth)",
-                            whiteSpace: "nowrap"
+                            transition: "all 0.2s ease",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0
                           }}
                           onMouseEnter={(e) => {
                             e.target.style.background = "#b91c1c";
@@ -244,35 +253,26 @@ export default function ReminderSchedulerModal({ payment, student, batch, onSave
                     ))}
                   </div>
                 </div>
-              )}
-
-              {reminders.length === 0 && (
-                <div
-                  style={{
-                    padding: "16px",
-                    background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)",
-                    borderRadius: "12px",
-                    fontSize: "13px",
-                    color: "var(--text2)",
-                    marginBottom: 16,
-                    textAlign: "center",
-                    border: "1px dashed rgba(59, 130, 246, 0.2)",
-                    fontWeight: 600
-                  }}
-                >
-                  ℹ️ No reminders scheduled yet
+              ) : (
+                <div style={{padding: "16px 14px", background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)", borderRadius: "12px", fontSize: "13px", color: "var(--text3)", marginBottom: 20, textAlign: "center", border: "1px dashed rgba(59, 130, 246, 0.2)", fontWeight: 600}}>
+                  ➕ Add reminders above
                 </div>
               )}
+
+              {/* Info Box */}
+              <div style={{padding: "12px", background: "linear-gradient(135deg, rgba(147, 51, 234, 0.08) 0%, rgba(79, 172, 254, 0.08) 100%)", borderRadius: "10px", fontSize: "12px", color: "var(--text3)", border: "1px solid rgba(147, 51, 234, 0.15)"}}>
+                💡 <strong>Tip:</strong> Reminders will be sent via WhatsApp on the scheduled dates
+              </div>
             </>
           )}
         </div>
 
-        <div className="modal-footer" style={{paddingTop: 16}}>
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <div className="modal-footer" style={{paddingTop: 16, paddingBottom: 20, paddingLeft: 24, paddingRight: 24, background: "var(--bg2)", display: "flex", gap: 10}}>
+          <button className="btn btn-secondary" onClick={onClose} style={{flex: 1, borderRadius: "10px", padding: "10px 16px", fontWeight: 600}}>Cancel</button>
           <button
             className="btn btn-primary"
             onClick={handleSave}
-            style={{background: "var(--gradient-warning)", boxShadow: "0 6px 20px rgba(217, 119, 6, 0.3)"}}
+            style={{flex: 1, borderRadius: "10px", padding: "10px 16px", fontWeight: 600, background: "linear-gradient(135deg, var(--amber) 0%, var(--orange) 100%)", color: "white", border: "none", boxShadow: "0 6px 20px rgba(217, 119, 6, 0.3)", cursor: "pointer"}}
           >
             Save Reminders
           </button>

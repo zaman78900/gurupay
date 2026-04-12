@@ -14,6 +14,7 @@ import {
 import SetPaymentDueDateModal from './components/modals/SetPaymentDueDateModal';
 import BulkMarkPaidModal from './components/modals/BulkMarkPaidModal';
 import ReminderSchedulerModal from './components/modals/ReminderSchedulerModal';
+import { applyAutoPaymentSetup } from './utils/autoPaymentSetup';
 
 const VERSION_CHECK_INTERVAL_MS = 60 * 1000;
 const VERSION_STORAGE_KEY = "gp_app_build_id";
@@ -1247,6 +1248,9 @@ function StudentModal({ student, batches, onSave, onClose, defaultBatchId }) {
   const [f, setF] = useState(student || { rollNumber: "", status: "Active", name: "", phone: "", email: "", batchId: defaultBatchId || batches[0]?.id || "", joiningDate: today(), notes: "", discount: 0 });
   const set = (k, v) => setF(p => ({ ...p, [k]: v }));
   const valid = f.name.trim() && f.phone.trim().length === 10 && f.batchId;
+  const isNewStudent = !student;
+  const selectedBatch = batches.find(b => b.id === f.batchId);
+  
   return (
     <div className="modal-overlay">
       <div className="modal-backdrop" onClick={onClose} />
@@ -1283,6 +1287,25 @@ function StudentModal({ student, batches, onSave, onClose, defaultBatchId }) {
             <div className="input-group"><label className="input-label">Fee Discount (₹)</label><input className="input" type="number" min="0" value={f.discount} onChange={e => set("discount", +e.target.value)} placeholder="0" /><div className="input-hint">Applied every month before GST</div></div>
             <div className="input-group"><label className="input-label">Notes</label><input className="input" value={f.notes} onChange={e => set("notes", e.target.value)} placeholder="Any special notes..." /></div>
           </div>
+          
+          {/* Auto Setup Information */}
+          {isNewStudent && (
+            <div style={{padding: "14px 16px", background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)", borderRadius: "10px", marginTop: 16, marginBottom: 0, fontSize: "12px", color: "var(--text3)", border: "1px solid rgba(59, 130, 246, 0.2)", fontWeight: 500}}>
+              <div style={{display: "flex", alignItems: "flex-start", gap: 8}}>
+                <div style={{marginTop: 2}}>🤖</div>
+                <div>
+                  <div style={{fontWeight: 700, color: "var(--text)", marginBottom: 4}}>Auto Setup Enabled</div>
+                  <div style={{lineHeight: "1.4"}}>
+                    When you add this student, we'll automatically:
+                  </div>
+                  <ul style={{margin: "6px 0", paddingLeft: 20, color: "var(--text3)"}}>
+                    <li>Set due date to end of current month</li>
+                    <li>Schedule WhatsApp reminders (1 day before & on due date)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
@@ -2477,7 +2500,17 @@ function FeeSyncPro({ user, authProfile }) {
       if (b) {
         const base = b.fee - (s.discount || 0);
         const total = base + Math.round(base * b.gstRate / 100);
-        const newPayment = { id: uid(), studentId: s.id, month: curMonth, status: "unpaid", amount: total, lateFee: 0, notes: "" };
+        // Create payment with basic info
+        let newPayment = { id: uid(), studentId: s.id, month: curMonth, status: "unpaid", amount: total, lateFee: 0, notes: "", reminders: [] };
+        
+        // Automatically apply due date and reminders based on batch settings
+        newPayment = applyAutoPaymentSetup(newPayment, {
+          autoDueDate: true,
+          duePreset: 'endOfMonth', // Can be 'endOfMonth', 'daysFromNow', or 'nextMonth'
+          daysForDueDate: 7, // Used if duePreset is 'daysFromNow'
+          autoReminders: true, // Automatically create WhatsApp reminders
+        });
+        
         const np = [...payments, newPayment];
         setPayments(np); await dbSet(KEYS.payments, np);
         
@@ -2505,7 +2538,7 @@ function FeeSyncPro({ user, authProfile }) {
         }
       }
     }
-    toast(isEdit ? "Student updated!" : "Student added!", { icon: "✅" });
+    toast(isEdit ? "Student updated!" : "✨ Student added with auto due date & reminders!", { icon: "✅" });
   };
 
   const deleteStudent = async (student) => {
