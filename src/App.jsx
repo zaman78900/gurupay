@@ -1603,10 +1603,40 @@ function FeesTab({ batches, students, payments, setPayments, selectedMonth, setS
   const [filterBatch, setFilterBatch] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const [bulkSelected, setBulkSelected] = useState(new Set());
 
   const _getStudent = id => students.find(s => s.id === id);
   const getBatch = id => batches.find(b => b.id === id);
   const getPayment = (sId, m) => payments.find(p => p.studentId === sId && p.month === m);
+  
+  // Bulk select handlers
+  const toggleBulkSelect = (paymentId) => {
+    const newSelected = new Set(bulkSelected);
+    if (newSelected.has(paymentId)) {
+      newSelected.delete(paymentId);
+    } else {
+      newSelected.add(paymentId);
+    }
+    setBulkSelected(newSelected);
+  };
+  
+  const selectAllVisible = () => {
+    const allPaymentIds = new Set();
+    filtered.forEach(s => {
+      const p = getPayment(s.id, selectedMonth);
+      if (p) allPaymentIds.add(p.id);
+    });
+    
+    if (bulkSelected.size === allPaymentIds.size) {
+      setBulkSelected(new Set());
+    } else {
+      setBulkSelected(allPaymentIds);
+    }
+  };
+  
+  const getSelectedPayments = () => {
+    return payments.filter(p => bulkSelected.has(p.id));
+  };
 
   const filtered = students.filter(s => {
     if (filterBatch !== "all" && s.batchId !== filterBatch) return false;
@@ -1712,24 +1742,51 @@ function FeesTab({ batches, students, payments, setPayments, selectedMonth, setS
             <option value="all">All Batches</option>
             {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
+          {bulkSelected.size > 0 && (
+            <button className="btn btn-primary btn-sm" onClick={() => openModal("bulkMarkPaid", { payments: getSelectedPayments() })} style={{ marginLeft: "auto" }}>
+              ✓ Mark {bulkSelected.size} as Paid
+            </button>
+          )}
         </div>
 
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Student</th><th>Batch</th><th>Amount</th><th>Status</th><th>Paid On</th><th style={{ textAlign: "right" }}>Actions</th></tr>
+              <tr>
+                <th style={{ width: 40, textAlign: "center", padding: "10px 8px" }}>
+                  <input 
+                    type="checkbox" 
+                    checked={bulkSelected.size > 0 && bulkSelected.size === payments.filter(p => p.month === selectedMonth).length}
+                    onChange={selectAllVisible}
+                    style={{ cursor: "pointer" }}
+                  />
+                </th>
+                <th>Student</th><th>Batch</th><th>Amount</th><th>Status</th><th>Due Date</th><th style={{ textAlign: "right" }}>Actions</th>
+              </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={6}><div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">No results found</div></div></td></tr>
+                <tr><td colSpan={7}><div className="empty"><div className="empty-icon">🔍</div><div className="empty-title">No results found</div></div></td></tr>
               )}
               {filtered.map(s => {
                 const b = getBatch(s.batchId);
                 if (!b) return null;
                 const p = getPayment(s.id, selectedMonth);
                 const amt = p ? p.amount : b.fee - (s.discount || 0) + Math.round((b.fee - (s.discount || 0)) * b.gstRate / 100);
+                const daysUntilDue = p?.dueDate ? Math.ceil((new Date(p.dueDate) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                const isDaysOverdue = daysUntilDue !== null && daysUntilDue < 0;
+                
                 return (
                   <tr key={s.id}>
+                    <td style={{ width: 40, textAlign: "center", padding: "10px 8px" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={p ? bulkSelected.has(p.id) : false}
+                        onChange={() => p && toggleBulkSelect(p.id)}
+                        disabled={!p}
+                        style={{ cursor: p ? "pointer" : "not-allowed", opacity: p ? 1 : 0.5 }}
+                      />
+                    </td>
                     <td>
                       <div className="td-primary">{s.name}</div>
                       {s.notes && <div style={{ fontSize: 11, color: "var(--amber)" }}>📝 {s.notes}</div>}
@@ -1747,9 +1804,24 @@ function FeesTab({ batches, students, payments, setPayments, selectedMonth, setS
                         </span>
                         : <span className="badge" style={{ background: "var(--bg3)", color: "var(--text4)" }}>Not generated</span>}
                     </td>
-                    <td style={{ fontSize: 12, color: "var(--text4)" }}>{p?.status === "paid" ? fmtDate(p.paidOn) : "—"}</td>
+                    <td style={{ fontSize: 11, color: "var(--text4)", textAlign: "center" }}>
+                      {p?.dueDate 
+                        ? <span style={{ fontWeight: 600, color: isDaysOverdue ? "var(--red)" : daysUntilDue <= 2 ? "var(--amber)" : "var(--accent)" }}>
+                            {isDaysOverdue ? `${Math.abs(daysUntilDue)}d overdue` : daysUntilDue === 0 ? "Today" : `${daysUntilDue}d left`}
+                          </span>
+                        : "—"
+                      }
+                    </td>
                     <td>
-                      <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
+                      <div style={{ display: "flex", gap: 5, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                        {p && p.status === "unpaid" && (
+                          <>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("setDueDate", { payment: p })} title="Set due date">📅</button>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("createInstallments", { payment: p, student: s, batch: b })} title="Create installments">💳</button>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("reminderScheduler", { payment: p, student: s, batch: b })} title="Schedule reminder">🔔</button>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("markPaid", { payment: p, student: s, batch: b })} title="Mark as paid">✅</button>
+                          </>
+                        )}
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("studentHistory", s)} title="View history"><I.History /></button>
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openModal("editStudent", s)} title="Edit"><I.Edit /></button>
                         <button className="btn btn-ghost btn-icon btn-sm" style={{ color: "var(--red)" }} onClick={() => { 
