@@ -3,6 +3,7 @@ import { useApp } from "../context/AppContext";
 import ReceiptButton from "../components/fees/ReceiptButton";
 import SetPaymentDueDateModal from "../components/modals/SetPaymentDueDateModal";
 import BulkMarkPaidModal from "../components/modals/BulkMarkPaidModal";
+import ReminderSchedulerModal from "../components/modals/ReminderSchedulerModal";
 
 const monthKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -75,53 +76,53 @@ function MarkPaidModalContent({ student, batch, payment, onSave, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-backdrop" onClick={onClose}></div>
       <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 450 }}>
-        <div className="modal-header" style={{ background: "var(--gradient-success)", borderRadius: "16px 16px 0 0", paddingBottom: 20, color: "white" }}>
+        <div className="modal-header" style={{ background: "var(--gradient-success)", borderRadius: "16px 16px 0 0", paddingBottom: 18, color: "white" }}>
           <div style={{flex: 1}}>
-            <div className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 4}}>✅ Mark as Paid</div>
-            <div className="modal-subtitle" style={{color: "rgba(255,255,255,0.85)"}}>{student.name} · {batch.name}</div>
+            <div className="modal-title" style={{color: "white", fontSize: 16, marginBottom: 3}}>✅ Mark as Paid</div>
+            <div className="modal-subtitle" style={{color: "rgba(255,255,255,0.85)", fontSize: 12}}>{student.name} · {batch.name}</div>
           </div>
-          <button className="modal-close" onClick={onClose} style={{color: "white", fontSize: 24}}>✕</button>
+          <button className="modal-close" onClick={onClose} style={{color: "white", fontSize: 22, fontWeight: "bold"}}>✕</button>
         </div>
         <div className="modal-body">
-          <div style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)", borderRadius: "14px", padding: "16px", marginBottom: 20, border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 12 }}>
+          <div style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)", borderRadius: "12px", padding: "14px", marginBottom: 16, border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 10 }}>
               <div>
-                <div style={{ fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>Base Fee</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>₹{base.toLocaleString("en-IN")}</div>
+                <div style={{ fontSize: 10, color: "var(--text4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Base Fee</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>₹{base.toLocaleString("en-IN")}</div>
               </div>
               {gst > 0 && <div>
-                <div style={{ fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>GST ({batch.gstRate}%)</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>₹{gst.toLocaleString("en-IN")}</div>
+                <div style={{ fontSize: 10, color: "var(--text4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>GST ({batch.gstRate}%)</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>₹{gst.toLocaleString("en-IN")}</div>
               </div>}
             </div>
-            {lateFee > 0 && <div style={{ padding: "10px 0", borderTop: "1px solid rgba(220,38,38,.15)", marginBottom: 8, paddingTop: 12, display: "flex", justifyContent: "space-between" }}>
-              <div style={{fontSize: 12, color: "var(--red)", fontWeight: 600}}>⚠️ Late Fee</div>
-              <div style={{color: "var(--red)", fontWeight: 700, fontSize: 14}}>₹{(+lateFee).toLocaleString("en-IN")}</div>
+            {lateFee > 0 && <div style={{ padding: "8px 0", borderTop: "1px solid rgba(220,38,38,.15)", marginBottom: 6, paddingTop: 10, display: "flex", justifyContent: "space-between" }}>
+              <div style={{fontSize: 11, color: "var(--red)", fontWeight: 700}}>⚠️ Late Fee</div>
+              <div style={{color: "var(--red)", fontWeight: 700, fontSize: 13}}>₹{(+lateFee).toLocaleString("en-IN")}</div>
             </div>}
-            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "2px solid rgba(5,150,105,.25)", paddingTop: 14, marginTop: 8 }}>
-              <span style={{ fontWeight: 700, color: "var(--text)" }}>Total Amount</span>
-              <span style={{ fontWeight: 800, color: "var(--accent)", fontFamily: "var(--font-display)", fontSize: 18 }}>₹{total.toLocaleString("en-IN")}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "2px solid rgba(5,150,105,.25)", paddingTop: 10, marginTop: 6 }}>
+              <span style={{ fontWeight: 700, color: "var(--text)", fontSize: 12 }}>Total Amount</span>
+              <span style={{ fontWeight: 800, color: "var(--accent)", fontFamily: "var(--font-display)", fontSize: 16 }}>₹{total.toLocaleString("en-IN")}</span>
             </div>
           </div>
           
           <div className="input-group">
-            <label className="input-label" style={{fontWeight: 700, color: "var(--text)"}}>📅 Payment Date</label>
-            <input type="date" className="input" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} style={{borderRadius: "10px"}} />
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 12}}>📅 Payment Date</label>
+            <input type="date" className="input" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} style={{borderRadius: "10px", fontSize: 13}} />
           </div>
           
           <div className="input-group">
-            <label className="input-label" style={{fontWeight: 700, color: "var(--text)"}}>⚠️ Late Fee (if any)</label>
-            <input type="number" className="input" value={lateFee} onChange={(e) => setLateFee(e.target.value)} placeholder="0" min="0" style={{borderRadius: "10px"}} />
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 12}}>⚠️ Late Fee (if any)</label>
+            <input type="number" className="input" value={lateFee} onChange={(e) => setLateFee(e.target.value)} placeholder="0" min="0" style={{borderRadius: "10px", fontSize: 13}} />
           </div>
           
-          <div className="input-group">
-            <label className="input-label" style={{fontWeight: 700, color: "var(--text)"}}>📝 Notes</label>
-            <textarea className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Cheque #1234, Online transfer..." style={{borderRadius: "10px"}} />
+          <div className="input-group" style={{marginBottom: 0}}>
+            <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 12}}>📝 Notes</label>
+            <textarea className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Cheque #1234, Online transfer..." style={{borderRadius: "10px", fontSize: 13}} />
           </div>
         </div>
-        <div className="modal-footer" style={{paddingTop: 16}}>
+        <div className="modal-footer" style={{paddingTop: 14}}>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave} style={{background: "var(--gradient-success)", boxShadow: "0 6px 20px rgba(16, 185, 129, 0.3)"}}>Mark Paid</button>
+          <button className="btn btn-primary" onClick={handleSave} style={{background: "var(--gradient-success)", boxShadow: "0 6px 20px rgba(16, 185, 129, 0.3)", padding: "8px 16px", fontSize: 13}}>Mark Paid</button>
         </div>
       </div>
     </div>
@@ -251,6 +252,15 @@ export default function Fees() {
     setModal(null);
   };
 
+  const handleReminderScheduler = (payment, student, batch) => {
+    setModal({ type: "reminderScheduler", data: { payment, student, batch } });
+  };
+
+  const handleReminderScheduled = (payment, reminderData) => {
+    // Reminders are typically handled by backend, just close modal
+    setModal(null);
+  };
+
   const closeModal = () => {
     setModal(null);
   };
@@ -293,29 +303,29 @@ export default function Fees() {
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-backdrop" onClick={closeModal}></div>
           <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <div className="modal-header" style={{background: "var(--gradient-warning)", borderRadius: "16px 16px 0 0", paddingBottom: 20, color: "white"}}>
+            <div className="modal-header" style={{background: "var(--gradient-warning)", borderRadius: "16px 16px 0 0", paddingBottom: 18, color: "white"}}>
               <div style={{flex: 1}}>
-                <div className="modal-title" style={{color: "white", fontSize: 18, marginBottom: 4}}>⚡ Generate Fees</div>
-                <div className="modal-subtitle" style={{color: "rgba(255,255,255,0.8)"}}>For {monthLabel(selectedMonth)}</div>
+                <div className="modal-title" style={{color: "white", fontSize: 16, marginBottom: 3}}>⚡ Generate Fees</div>
+                <div className="modal-subtitle" style={{color: "rgba(255,255,255,0.85)", fontSize: 12}}>For {monthLabel(selectedMonth)}</div>
               </div>
-              <button className="modal-close" onClick={closeModal} style={{color: "white", fontWeight: "bold"}}>✕</button>
+              <button className="modal-close" onClick={closeModal} style={{color: "white", fontWeight: "bold", fontSize: 22}}>✕</button>
             </div>
             <div className="modal-body">
-              <div style={{ textAlign: "center", padding: "24px 0" }}>
-                <div style={{ fontSize: 56, marginBottom: 16, animation: "pulse 2s infinite" }}>⚡</div>
-                <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: "var(--text)" }}>Ready to Generate</div>
-                <div style={{ fontSize: 14, color: "var(--text3)", lineHeight: 1.8 }}>
-                  <strong style={{color: "var(--text)", fontSize: 18}}>{students.filter(s => !getPayment(s.id, selectedMonth)).length}</strong>
-                  <div style={{marginTop: 4}}>students need fees for {monthLabel(selectedMonth)}</div>
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ fontSize: 48, marginBottom: 12, animation: "pulse 2s infinite" }}>⚡</div>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: "var(--text)" }}>Ready to Generate</div>
+                <div style={{ fontSize: 13, color: "var(--text3)", lineHeight: 1.7 }}>
+                  <strong style={{color: "var(--text)", fontSize: 16}}>{students.filter(s => !getPayment(s.id, selectedMonth)).length}</strong>
+                  <div style={{marginTop: 3}}>students need fees</div>
                 </div>
               </div>
-              <div style={{background: "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%)", borderRadius: "12px", padding: "14px", marginBottom: 0, borderLeft: "4px solid var(--amber)"}}>
-                <div style={{fontSize: 12, color: "var(--text2)", fontWeight: 600}}>💡 This will create fee records for all selected students</div>
+              <div style={{background: "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%)", borderRadius: "12px", padding: "12px", marginBottom: 0, borderLeft: "4px solid var(--amber)"}}>
+                <div style={{fontSize: 11, color: "var(--text2)", fontWeight: 600}}>💡 This will create fee records for all students</div>
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleGenerateFeesConfirm} style={{background: "var(--gradient-warning)", boxShadow: "0 6px 20px rgba(245, 158, 11, 0.3)"}}>
+              <button className="btn btn-primary" onClick={handleGenerateFeesConfirm} style={{background: "var(--gradient-warning)", boxShadow: "0 6px 20px rgba(245, 158, 11, 0.3)", fontSize: 13, padding: "8px 16px"}}>
                 Generate {students.filter(s => !getPayment(s.id, selectedMonth)).length} Fees
               </button>
             </div>
@@ -341,6 +351,16 @@ export default function Fees() {
         />
       )}
       
+      {modal?.type === "reminderScheduler" && (
+        <ReminderSchedulerModal
+          payment={modal.data.payment}
+          student={modal.data.student}
+          batch={modal.data.batch}
+          onSave={handleReminderScheduled}
+          onClose={closeModal}
+        />
+      )}
+      
       {modal?.type === "bulkMarkPaid" && (
         <BulkMarkPaidModal
           payments={modal.data.payments || []}
@@ -352,52 +372,52 @@ export default function Fees() {
         />
       )}
 
-      <div style={{display: "flex", gap: 14, marginBottom: 20, flexWrap: "wrap", alignItems: "center"}}>
-        <div className="stat-card" style={{flex: "1 1 140px", minHeight: "auto", cursor: "default"}}>
-          <div style={{fontSize: 22, marginBottom: 8}}>💰</div>
-          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}>Collected</div>
-          <div style={{fontSize: 18, fontWeight: 800, color: "var(--accent)", fontFamily: "var(--font-display)"}}>₹{collected.toLocaleString("en-IN")}</div>
-          <div style={{fontSize: 10, color: "var(--text4)", marginTop: 4}}>{paid.length} payments</div>
+      <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 18}}>
+        <div className="stat-card" style={{cursor: "default"}}>
+          <div style={{fontSize: 24, marginBottom: 8}}>💰</div>
+          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6}}>Collected</div>
+          <div style={{fontSize: 18, fontWeight: 800, color: "var(--accent)", fontFamily: "var(--font-display)", marginBottom: 4}}>₹{collected.toLocaleString("en-IN")}</div>
+          <div style={{fontSize: 10, color: "var(--text4)"}}>{paid.length} payments</div>
         </div>
         
-        <div className="stat-card" style={{flex: "1 1 140px", minHeight: "auto", cursor: "default"}}>
-          <div style={{fontSize: 22, marginBottom: 8}}>⏳</div>
-          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}>Pending</div>
-          <div style={{fontSize: 18, fontWeight: 800, color: "var(--red)", fontFamily: "var(--font-display)"}}>₹{pending.toLocaleString("en-IN")}</div>
-          <div style={{fontSize: 10, color: "var(--text4)", marginTop: 4}}>{unpaid.length} payments</div>
+        <div className="stat-card" style={{cursor: "default"}}>
+          <div style={{fontSize: 24, marginBottom: 8}}>⏳</div>
+          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6}}>Pending</div>
+          <div style={{fontSize: 18, fontWeight: 800, color: "var(--red)", fontFamily: "var(--font-display)", marginBottom: 4}}>₹{pending.toLocaleString("en-IN")}</div>
+          <div style={{fontSize: 10, color: "var(--text4)"}}>{unpaid.length} payments</div>
         </div>
         
-        <div className="stat-card" style={{flex: "1 1 140px", minHeight: "auto", cursor: "default"}}>
-          <div style={{fontSize: 22, marginBottom: 8}}>📊</div>
-          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}>Collection Rate</div>
-          <div style={{fontSize: 18, fontWeight: 800, color: "var(--blue)", fontFamily: "var(--font-display)"}}>{rate}%</div>
-          <div style={{fontSize: 10, color: "var(--text4)", marginTop: 4}}>of {mPayments.length} total</div>
+        <div className="stat-card" style={{cursor: "default"}}>
+          <div style={{fontSize: 24, marginBottom: 8}}>📊</div>
+          <div style={{fontSize: 11, color: "var(--text4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6}}>Rate</div>
+          <div style={{fontSize: 18, fontWeight: 800, color: "var(--blue)", fontFamily: "var(--font-display)", marginBottom: 4}}>{rate}%</div>
+          <div style={{fontSize: 10, color: "var(--text4)"}}>of {mPayments.length} total</div>
         </div>
       </div>
       
-      <div className="toolbar" style={{background: "var(--bg2)", padding: "14px 16px", borderRadius: "12px", border: "1px solid var(--border)"}}>
-        <select className="month-sel" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={{padding: "8px 12px", fontWeight: 600}}>
+      <div className="toolbar" style={{background: "var(--bg2)", padding: "12px 14px", borderRadius: "12px", border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap"}}>
+        <select className="month-sel" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={{padding: "8px 12px", fontWeight: 600, borderRadius: 8}}>
           {months6.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
-        <button className="btn btn-secondary btn-sm" onClick={handleGenerateFees} style={{borderRadius: "8px"}}>⚡ Generate</button>
+        <button className="btn btn-secondary" onClick={handleGenerateFees} style={{borderRadius: "8px", fontSize: 12, padding: "7px 12px"}}>⚡ Generate</button>
         {selected.size > 0 && (
-          <button className="btn btn-primary btn-sm" onClick={handleBulkMarkPaid} style={{background: "var(--gradient-success)", color: "white", borderRadius: "8px", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)"}} title={`Mark ${selected.size} payments as paid`}>
+          <button className="btn btn-primary" onClick={handleBulkMarkPaid} style={{background: "var(--gradient-success)", color: "white", borderRadius: "8px", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)", fontSize: 12, padding: "7px 12px"}} title={`Mark ${selected.size} payments as paid`}>
             ✓ Mark {selected.size} as Paid
           </button>
         )}
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={exportCSV} style={{borderRadius: "8px"}}><I.Download /> Export CSV</button>
+          <button className="btn btn-secondary" onClick={exportCSV} style={{borderRadius: "8px", fontSize: 12, padding: "7px 12px", display: "flex", alignItems: "center", gap: 5}}><I.Download /> Export</button>
         </div>
       </div>
-      <div className="card" style={{borderRadius: "14px", border: "1px solid var(--border)", boxShadow: "0 4px 6px rgba(0,0,0,.05)"}}>
-        <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
-          <div className="search-wrap" style={{ flex: "1 1 200px", position: "relative" }}><I.Search /><input className="input" style={{ paddingLeft: 34, borderRadius: "10px" }} placeholder="🔍 Search student or phone..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+      <div className="card" style={{borderRadius: "14px", border: "1px solid var(--border)", boxShadow: "0 4px 6px rgba(0,0,0,.05)", padding: 0, overflow: "hidden"}}>
+        <div style={{ padding: "16px 16px 0 16px" }}>
+          <div className="search-wrap" style={{ flex: "1", position: "relative", marginBottom: 0 }}><I.Search /><input className="input" style={{ paddingLeft: 34, borderRadius: "10px" }} placeholder="🔍 Search student or phone..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
         </div>
-        <div className="table-wrap" style={{borderRadius: "12px", border: "none", overflow: "hidden"}}>
+        <div className="table-wrap" style={{borderRadius: 0, border: "none", overflow: "hidden", marginTop: 16}}>
           <table>
-            <thead style={{background: "linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(15, 23, 42, 0.04) 100%)"}}><tr><th style={{width: 40, paddingLeft: 16}}>
-              <input type="checkbox" checked={selected.size === unpaid.length && unpaid.length > 0} onChange={selectAll} style={{cursor: "pointer", width: 18, height: 18, accentColor: "var(--accent)"}} />
-            </th><th>Name</th><th>Batch</th><th style={{textAlign: "right", paddingRight: 16}}>Amount</th><th>Status</th><th>Due Date</th><th>Paid On</th><th style={{ textAlign: "right", paddingRight: 16 }}>Actions</th></tr></thead>
+            <thead style={{background: "linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(15, 23, 42, 0.04) 100%)"}}><tr><th style={{width: 36, paddingLeft: 14, paddingRight: 6}}>
+              <input type="checkbox" checked={selected.size === unpaid.length && unpaid.length > 0} onChange={selectAll} style={{cursor: "pointer", width: 16, height: 16, accentColor: "var(--accent)"}} />
+            </th><th>Name</th><th>Batch</th><th style={{textAlign: "right", paddingRight: 14}}>Amount</th><th>Status</th><th>Due Date</th><th style={{textAlign: "right", paddingRight: 14}}>Actions</th></tr></thead>
             <tbody>
               {filtered.map((s) => {
                 const b = getBatch(s.batchId);
@@ -423,41 +443,40 @@ export default function Fees() {
                       background: "linear-gradient(135deg, rgba(220, 38, 38, 0.04) 0%, rgba(220, 38, 38, 0.02) 100%)",
                     } : {}
                   }>
-                    <td style={{width: 40, paddingLeft: 16}}>
+                    <td style={{width: 36, paddingLeft: 14, paddingRight: 6}}>
                       {isUnpaid && (
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleSelect(p.id)}
-                          style={{cursor: "pointer", width: 18, height: 18, accentColor: "var(--accent)"}}
+                          style={{cursor: "pointer", width: 16, height: 16, accentColor: "var(--accent)"}}
                         />
                       )}
                     </td>
                     <td><div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)", letterSpacing: "-0.3px" }}>{s.name}</div></td>
-                    <td><span className="badge badge-batch" style={{fontWeight: 600}}>{b.name}</span></td>
-                    <td style={{textAlign: "right", paddingRight: 16, fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, color: isPaid ? "var(--accent)" : "var(--text)"}}>₹{(amt + (p?.lateFee || 0)).toLocaleString("en-IN")}</td>
+                    <td><span className="badge badge-batch" style={{fontWeight: 600, fontSize: 11}}>{b.name}</span></td>
+                    <td style={{textAlign: "right", paddingRight: 14, fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 13, color: isPaid ? "var(--accent)" : "var(--text)"}}>₹{(amt + (p?.lateFee || 0)).toLocaleString("en-IN")}</td>
                     <td>
                       {!p ? (
-                        <span className="badge" style={{background: "rgba(100, 116, 139, 0.1)", color: "var(--text4)", fontSize: 11, fontWeight: 600}}>Not Generated</span>
+                        <span className="badge" style={{background: "rgba(100, 116, 139, 0.1)", color: "var(--text4)", fontSize: 10, fontWeight: 600}}>—</span>
                       ) : p.status === "paid" ? (
-                        <span className="badge badge-paid" style={{fontWeight: 700, fontSize: 11}}>✓ Paid</span>
+                        <span className="badge badge-paid" style={{fontWeight: 700, fontSize: 10}}>✓ Paid</span>
                       ) : (
-                        <span className="badge badge-unpaid" style={{fontWeight: 700, fontSize: 11}}>⏳ Unpaid</span>
+                        <span className="badge badge-unpaid" style={{fontWeight: 700, fontSize: 10}}>Unpaid</span>
                       )}
                     </td>
                     <td>
-                      <div style={{fontSize: 12}}>
+                      <div style={{fontSize: 11}}>
                         {p?.dueDate ? fmtDate(p.dueDate) : "—"}
                         {p?.dueDate && days !== null && (
-                          <div style={{fontSize: 11, fontWeight: 600, marginTop: 2, color: isOverdue ? "var(--red)" : isDueToday ? "var(--amber)" : isDueSoon ? "var(--amber)" : "var(--text4)"}}>
-                            {isOverdue ? `⚠️ ${Math.abs(days)}d overdue` : isDueToday ? "🔔 Due today" : isDueSoon ? `📅 ${days}d left` : `✓ ${days}d left`}
+                          <div style={{fontSize: 10, fontWeight: 600, marginTop: 2, color: isOverdue ? "var(--red)" : isDueToday ? "var(--amber)" : isDueSoon ? "var(--amber)" : "var(--text4)"}}>
+                            {isOverdue ? `⚠️ ${Math.abs(days)}d ago` : isDueToday ? "🔔 Today" : isDueSoon ? `📅 ${days}d` : `✓ ${days}d`}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td>{isPaid ? fmtDate(p.paidOn) : "—"}</td>
-                    <td style={{paddingRight: 16}}>
-                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
+                    <td style={{paddingRight: 14}}>
+                      <div style={{ display: "flex", gap: 5, justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap" }}>
                         {isPaid && (
                           <>
                             <ReceiptButton
@@ -473,13 +492,14 @@ export default function Fees() {
                                 instituteName: profile?.name || settings?.instituteName,
                               }}
                             />
-                            <button className="btn btn-danger btn-sm" onClick={() => handleUndo(p)} title="Undo payment"><I.Undo /></button>
+                            <button className="btn btn-danger" onClick={() => handleUndo(p)} title="Undo" style={{padding: "5px 8px", fontSize: 11, borderRadius: "6px"}}><I.Undo /></button>
                           </>
                         )}
                         {isUnpaid && (
                           <>
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleSetDueDate(p)} title="Set due date" style={{borderRadius: "7px"}}>📅</button>
-                            <button className="btn btn-primary btn-sm" onClick={() => handleMarkPaidClick(s, p)} style={{background: "var(--gradient-success)", borderRadius: "7px", boxShadow: "0 2px 8px rgba(16, 185, 129, 0.2)", color: "white"}}>✓ Paid</button>
+                            <button className="btn btn-secondary" onClick={() => handleSetDueDate(p)} title="Due date" style={{borderRadius: "6px", padding: "5px 8px", fontSize: 11}}>📅</button>
+                            <button className="btn btn-secondary" onClick={() => handleReminderScheduler(p, s, b)} title="Reminder" style={{borderRadius: "6px", padding: "5px 8px", fontSize: 11}}>🔔</button>
+                            <button className="btn btn-primary" onClick={() => handleMarkPaidClick(s, p)} style={{background: "var(--gradient-success)", borderRadius: "6px", padding: "5px 10px", fontSize: 11, boxShadow: "0 2px 8px rgba(16, 185, 129, 0.2)", color: "white"}}>✓</button>
                           </>
                         )}
                       </div>

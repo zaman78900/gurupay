@@ -80,18 +80,18 @@ export default function SetPaymentDueDateModal({ payment, onSave, onClose }) {
 
           <div style={{ marginBottom: 20 }}>
             <label className="input-label" style={{fontWeight: 700, color: "var(--text)", fontSize: 13}}>⚡ Quick Presets</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
               {presets.map((preset) => (
                 <button
                   key={preset.label}
                   onClick={() => applyPreset(preset.offset)}
                   style={{
-                    padding: "12px 14px",
+                    padding: "10px 12px",
                     border: "1.5px solid var(--border)",
                     borderRadius: "10px",
                     background: "linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(139, 92, 246, 0.04) 100%)",
                     cursor: "pointer",
-                    fontSize: "13px",
+                    fontSize: "12px",
                     fontWeight: 600,
                     color: "var(--text)",
                     transition: "var(--transition-smooth)",
