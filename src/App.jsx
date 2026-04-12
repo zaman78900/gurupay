@@ -1245,7 +1245,7 @@ function ReceiptModal({ student, batch, payment, profile, toast, onClose }) {
 
 // ─── Student Form Modal ───────────────────────────────────────────────────────
 function StudentModal({ student, batches, onSave, onClose, defaultBatchId }) {
-  const [f, setF] = useState(student || { rollNumber: "", status: "Active", name: "", phone: "", email: "", batchId: defaultBatchId || batches[0]?.id || "", joiningDate: today(), notes: "", discount: 0, dueDatePreference: "lastDay" });
+  const [f, setF] = useState(student || { rollNumber: "", status: "Active", name: "", phone: "", email: "", batchId: defaultBatchId || batches[0]?.id || "", joiningDate: today(), notes: "", discount: 0, dueDateMode: "preset", dueDatePreference: "lastDay", customDueDate: "" });
   const set = (k, v) => setF(p => ({ ...p, [k]: v }));
   const valid = f.name.trim() && f.phone.trim().length === 10 && f.batchId;
   const isNewStudent = !student;
@@ -1261,6 +1261,12 @@ function StudentModal({ student, batches, onSave, onClose, defaultBatchId }) {
   
   const getPresetLabel = (value) => {
     return DUE_DATE_PRESETS.find(p => p.value === value)?.label || value;
+  };
+  
+  const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return 'Not set';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
   
   return (
@@ -1300,22 +1306,63 @@ function StudentModal({ student, batches, onSave, onClose, defaultBatchId }) {
             <div className="input-group"><label className="input-label">Notes</label><input className="input" value={f.notes} onChange={e => set("notes", e.target.value)} placeholder="Any special notes..." /></div>
           </div>
           
-          {/* Payment Due Date Preference */}
+          {/* Payment Due Date Selection */}
           <div className="input-group">
-            <label className="input-label">Payment Due Date Preference {isNewStudent && "📅"}</label>
-            <select 
-              className="input" 
-              value={f.dueDatePreference} 
-              onChange={e => set("dueDatePreference", e.target.value)}
-              style={{ borderRadius: "10px" }}
-            >
-              {DUE_DATE_PRESETS.map(preset => (
-                <option key={preset.value} value={preset.value}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-            <div className="input-hint">{DUE_DATE_PRESETS.find(p => p.value === f.dueDatePreference)?.description || "Select a due date pattern"}</div>
+            <label className="input-label">Payment Due Date {isNewStudent && "📅"}</label>
+            
+            {/* Toggle between Preset and Custom */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 12, background: "var(--bg2)", padding: "6px", borderRadius: "8px" }}>
+              <button 
+                className={`btn ${f.dueDateMode === 'preset' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => set("dueDateMode", "preset")}
+                style={{ flex: 1, padding: "7px 12px", fontSize: 12, borderRadius: "6px" }}
+              >
+                📋 Preset
+              </button>
+              <button 
+                className={`btn ${f.dueDateMode === 'custom' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => set("dueDateMode", "custom")}
+                style={{ flex: 1, padding: "7px 12px", fontSize: 12, borderRadius: "6px" }}
+              >
+                📅 Calendar
+              </button>
+            </div>
+            
+            {/* Preset Selection */}
+            {f.dueDateMode === 'preset' && (
+              <>
+                <select 
+                  className="input" 
+                  value={f.dueDatePreference} 
+                  onChange={e => set("dueDatePreference", e.target.value)}
+                  style={{ borderRadius: "10px", marginBottom: 8 }}
+                >
+                  {DUE_DATE_PRESETS.map(preset => (
+                    <option key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="input-hint">{DUE_DATE_PRESETS.find(p => p.value === f.dueDatePreference)?.description || "Select a due date pattern"}</div>
+              </>
+            )}
+            
+            {/* Custom Date Selection */}
+            {f.dueDateMode === 'custom' && (
+              <>
+                <input 
+                  className="input" 
+                  type="date" 
+                  value={f.customDueDate}
+                  onChange={e => set("customDueDate", e.target.value)}
+                  min={today()}
+                  style={{ borderRadius: "10px", marginBottom: 8 }}
+                />
+                <div className="input-hint">
+                  {f.customDueDate ? `Selected: ${formatDateDisplay(f.customDueDate)}` : "Pick a specific date from the calendar"}
+                </div>
+              </>
+            )}
           </div>
           
           {/* Auto Setup Information */}
@@ -1329,10 +1376,19 @@ function StudentModal({ student, batches, onSave, onClose, defaultBatchId }) {
                     For this student, we'll automatically every month:
                   </div>
                   <ul style={{margin: "6px 0", paddingLeft: 20, color: "var(--text3)"}}>
-                    <li>Create payment with due date: <strong>{getPresetLabel(f.dueDatePreference)}</strong></li>
+                    {f.dueDateMode === 'preset' ? (
+                      <>
+                        <li>Create payment with due date: <strong>{getPresetLabel(f.dueDatePreference)}</strong></li>
+                        <li>Apply this pattern every month automatically</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Create payment with due date: <strong>{f.customDueDate ? formatDateDisplay(f.customDueDate) : 'Please select a date'}</strong></li>
+                        <li>Use same date each month (can override anytime)</li>
+                      </>
+                    )}
                     <li>Schedule WhatsApp reminders (1 day before & on due date)</li>
                     <li>Calculate fee based on batch rate & discount</li>
-                    <li>Can override due date anytime if needed</li>
                   </ul>
                 </div>
               </div>
@@ -2531,19 +2587,26 @@ function FeeSyncPro({ user, authProfile }) {
     }
     
     if (!isEdit) {
-      // New student - create first payment with their due date preference
+      // New student - create first payment with their due date preference or custom date
       const b = batches.find(b => b.id === studentToSave.batchId);
       if (b) {
         const base = b.fee - (studentToSave.discount || 0);
         const total = base + Math.round(base * b.gstRate / 100);
         
-        // Calculate due date based on student's preference
-        const dueDateFromPref = calculateDueDateFromPreference(
-          studentToSave.dueDatePreference || 'lastDay',
-          new Date()
-        );
+        // Determine due date based on mode
+        let dueDate;
+        if (studentToSave.dueDateMode === 'custom' && studentToSave.customDueDate) {
+          // Use custom date directly
+          dueDate = studentToSave.customDueDate;
+        } else {
+          // Calculate from preset preference
+          dueDate = calculateDueDateFromPreference(
+            studentToSave.dueDatePreference || 'lastDay',
+            new Date()
+          );
+        }
         
-        // Create payment with due date from preference
+        // Create payment with calculated/custom due date
         let newPayment = { 
           id: uid(), 
           studentId: studentToSave.id, 
@@ -2553,10 +2616,10 @@ function FeeSyncPro({ user, authProfile }) {
           lateFee: 0, 
           notes: "", 
           reminders: [],
-          dueDate: dueDateFromPref
+          dueDate: dueDate
         };
         
-        // Apply reminders based on the calculated due date
+        // Apply reminders based on the due date
         newPayment = applyAutoPaymentSetup(newPayment, {
           autoDueDate: false, // Don't recalculate, we already set it
           autoReminders: true, // Create WhatsApp reminders
