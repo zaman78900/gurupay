@@ -21,6 +21,7 @@ const BatchDetails = ({
   const [sortOrder, setSortOrder] = useState('asc');
   const [selectedMonth, setSelectedMonth] = useState(curMonth);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+  const [selected, setSelected] = useState(new Set()); // Bulk selection
 
   const batchStudents = useMemo(() => {
     return students
@@ -115,6 +116,24 @@ const BatchDetails = ({
 
   const stats = calculateBatchStats();
 
+  const toggleSelect = (studentId) => {
+    const newSelected = new Set(selected);
+    if (newSelected.has(studentId)) {
+      newSelected.delete(studentId);
+    } else {
+      newSelected.add(studentId);
+    }
+    setSelected(newSelected);
+  };
+
+  const selectAll = () => {
+    if (selected.size === batchStudents.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(batchStudents.map(s => s.id)));
+    }
+  };
+
   return (
     <div className="batch-details">
       {/* Batch Header */}
@@ -184,9 +203,9 @@ const BatchDetails = ({
         <div className="card-header">
           <div>
             <div className="card-title">Student Management</div>
-            <div className="card-subtitle">Manage students in {batch.name}</div>
+            <div className="card-subtitle">Manage students in {batch.name} • {selected.size > 0 ? `${selected.size} selected` : `${batchStudents.length} students`}</div>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <select 
               className="month-sel" 
               value={selectedMonth} 
@@ -206,7 +225,7 @@ const BatchDetails = ({
                   className={`filter-tab ${viewMode === mode ? 'active' : ''}`}
                   onClick={() => setViewMode(mode)}
                 >
-                  {mode === 'list' ? 'List View' : 'Grid View'}
+                  {mode === 'list' ? 'List' : 'Grid'}
                 </div>
               ))}
             </div>
@@ -216,31 +235,61 @@ const BatchDetails = ({
           </div>
         </div>
 
-        {/* Search and Filter */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {/* Search Bar */}
+        <div style={{ display: 'flex', gap: '12px', padding: '16px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg2)', flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="search-wrap" style={{ flex: '1 1 300px' }}>
             <I.Search />
             <input 
               className="input" 
-              style={{ paddingLeft: '34px' }}
+              style={{ paddingLeft: '34px', borderRadius: '10px', fontSize: '13px' }}
               placeholder="Search students by name or phone..." 
               value={search} 
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <select className="month-sel" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <select className="input" value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ maxWidth: '180px', borderRadius: '8px', fontSize: '12px', padding: '7px 12px' }}>
             <option value="name">Sort by Name</option>
             <option value="phone">Sort by Phone</option>
             <option value="joiningDate">Sort by Joining Date</option>
             <option value="status">Sort by Status</option>
           </select>
           <button 
-            className="btn btn-secondary btn-sm" 
+            className="btn btn-secondary" 
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            style={{ padding: '7px 14px', fontSize: '12px', borderRadius: '8px' }}
           >
-            {sortOrder === 'asc' ? '↑' : '↓'} {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+            {sortOrder === 'asc' ? '↑' : '↓'} 
           </button>
         </div>
+
+        {/* Bulk Selection Toolbar */}
+        {batchStudents.length > 0 && (
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg2)', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input 
+              type="checkbox"
+              checked={selected.size === batchStudents.length && batchStudents.length > 0}
+              onChange={selectAll}
+              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent)' }}
+              title={selected.size === batchStudents.length ? 'Deselect all' : 'Select all'}
+            />
+            <span style={{ fontSize: '12px', color: 'var(--text4)', fontWeight: '500' }}>
+              {selected.size > 0 ? `${selected.size} selected` : 'No selection'}
+            </span>
+            {selected.size > 0 && (
+              <>
+                <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setSelected(new Set())}
+                  style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px' }}
+                  title="Clear selection"
+                >
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Students List/Grid */}
         {viewMode === 'list' ? (
@@ -248,6 +297,15 @@ const BatchDetails = ({
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: '36px', paddingLeft: '16px', paddingRight: '8px' }}>
+                    <input 
+                      type="checkbox"
+                      checked={selected.size === batchStudents.length && batchStudents.length > 0}
+                      onChange={selectAll}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent)' }}
+                      title={selected.size === batchStudents.length ? 'Deselect all' : 'Select all'}
+                    />
+                  </th>
                   <th>Student Name</th>
                   <th>Roll #</th>
                   <th>Phone</th>
@@ -256,13 +314,13 @@ const BatchDetails = ({
                   <th>Discount</th>
                   <th>Student Status</th>
                   <th>Fee Status</th>
-                  <th>Actions</th>
+                  <th style={{ textAlign: 'right', paddingRight: '16px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {batchStudents.length === 0 ? (
                   <tr>
-                    <td colSpan="7">
+                    <td colSpan="10">
                       <div className="empty">
                         <div className="empty-icon">👥</div>
                         <div className="empty-title">No students in this batch</div>
@@ -273,9 +331,22 @@ const BatchDetails = ({
                 ) : (
                   batchStudents.map(student => {
                     const payment = getPaymentStatus(student.id);
+                    const isSelected = selected.has(student.id);
                     
                     return (
-                      <tr key={student.id}>
+                      <tr key={student.id} style={isSelected ? {
+                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)',
+                        borderLeft: '3px solid var(--accent)'
+                      } : {}}>
+                        <td style={{ width: '36px', paddingLeft: '16px', paddingRight: '8px' }}>
+                          <input 
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(student.id)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--accent)' }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
                         <td>
                           <div style={{ fontWeight: '600', fontSize: '13px' }}>{student.name}</div>
                           {student.notes && (
@@ -317,7 +388,7 @@ const BatchDetails = ({
                             <span style={{ fontSize: '12px', color: 'var(--text4)' }}>Not Generated</span>
                           )}
                         </td>
-                        <td>
+                        <td style={{ paddingRight: '16px' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                             <button 
                               className="btn btn-ghost btn-icon btn-sm" 
@@ -369,105 +440,127 @@ const BatchDetails = ({
             </table>
           </div>
         ) : (
-          <div className="grid-3">
-            {batchStudents.map(student => {
-              const payment = getPaymentStatus(student.id);
-              
-              return (
-                <div key={student.id} className="card" style={{ padding: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div>
-                      <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text)' }}>
-                        {student.name}
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text4)', marginBottom: '4px' }}>
-                        Roll #: {student.rollNumber || '—'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text4)' }}>
-                        📱 {student.phone}
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text4)' }}>
-                        Status: {student.status || 'Active'}
+          <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            {batchStudents.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px', color: 'var(--text4)' }}>
+                📭 No students found
+              </div>
+            ) : (
+              batchStudents.map(student => {
+                const payment = getPaymentStatus(student.id);
+                const isSelected = selected.has(student.id);
+                
+                return (
+                  <div 
+                    key={student.id} 
+                    className="card" 
+                    style={{ 
+                      padding: '16px', 
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                      background: isSelected ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)' : 'var(--bg2)',
+                      boxShadow: isSelected ? '0 4px 12px rgba(16, 185, 129, 0.12)' : '0 1px 3px rgba(0, 0, 0, 0.08)'
+                    }}
+                    onClick={() => toggleSelect(student.id)}
+                  >
+                    {/* Selection Checkbox */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+                      <input 
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(student.id)}
+                        style={{ cursor: 'pointer', width: '18px', height: '18px', accentColor: 'var(--accent)', marginTop: '2px', flex: '0 0 auto' }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text)', marginBottom: '2px' }}>
+                          {student.name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text4)' }}>
+                          {student.rollNumber ? `Roll #${student.rollNumber}` : '—'}
+                        </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    
+                    {/* Student Info */}
+                    <div style={{ padding: '10px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: '12px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text4)', fontWeight: '600', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.4px' }}>Contact</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text)', marginBottom: '8px' }}>📱 {student.phone}</div>
+                      {student.email && (
+                        <div style={{ fontSize: '12px', color: 'var(--text)', marginBottom: '8px' }}>📧 {student.email}</div>
+                      )}
+                      <div style={{ fontSize: '11px', color: 'var(--text4)', fontWeight: '600', textTransform: 'uppercase', marginBottom: '3px', letterSpacing: '0.4px', marginTop: '8px' }}>Status</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text)' }}>{student.status || 'Active'}</div>
+                    </div>
+
+                    {/* Fee & Discount Info */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text4)', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.4px' }}>Fee Status</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        {payment ? (
+                          <span 
+                            className={`badge ${getStatusBadge(payment.status)}`}
+                            style={{ color: getStatusColor(payment.status) }}
+                          >
+                            {payment.status === 'paid' ? '✓ Paid' : 
+                             payment.status === 'waived' ? '🔵 Waived' : 
+                             '⏳ Unpaid'}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--text4)', background: 'rgba(100, 116, 139, 0.1)', padding: '4px 8px', borderRadius: '6px' }}>Not Generated</span>
+                        )}
+                      </div>
+                      {student.discount > 0 && (
+                        <div className="badge" style={{ background: 'rgba(251, 146, 60, 0.15)', color: 'var(--amber)', fontSize: '11px', fontWeight: '600' }}>
+                          💰 Discount: {fmtINR(student.discount)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       <button 
                         className="btn btn-ghost btn-icon btn-sm" 
-                        onClick={() => onEditStudent(student)}
+                        onClick={(e) => { e.stopPropagation(); onEditStudent(student); }}
+                        title="Edit Student"
+                        style={{ flex: '1 1 auto' }}
                       >
-                        <I.Edit />
+                        <I.Edit /> Edit
                       </button>
+                      {!payment || payment.status === 'unpaid' ? (
+                        <button 
+                          className="btn btn-primary btn-sm" 
+                          onClick={(e) => { e.stopPropagation(); onMarkPaid(student, payment); }}
+                          title="Mark as Paid"
+                          style={{ flex: '1 1 auto', background: 'rgba(16, 185, 129, 0.15)', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                        >
+                          ✓ Paid
+                        </button>
+                      ) : (
+                        <button 
+                          className="btn btn-secondary btn-sm" 
+                          onClick={(e) => { e.stopPropagation(); onSendReminder(student); }}
+                          title="Send Message"
+                          style={{ flex: '1 1 auto' }}
+                        >
+                          💬 Message
+                        </button>
+                      )}
                       <button 
                         className="btn btn-danger btn-sm" 
-                        onClick={() => onDeleteStudent(student)}
+                        onClick={(e) => { e.stopPropagation(); onDeleteStudent(student); }}
+                        title="Remove Student"
+                        style={{ padding: '6px 8px' }}
                       >
                         <I.Trash />
                       </button>
                     </div>
                   </div>
-                  
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text4)', marginBottom: '4px' }}>
-                      Joining Date: {fmtDate(student.joiningDate)}
-                    </div>
-                    {student.email && (
-                      <div style={{ fontSize: '12px', color: 'var(--text4)', marginBottom: '4px' }}>
-                        📧 {student.email}
-                      </div>
-                    )}
-                    {student.discount > 0 && (
-                      <div className="badge badge-discount" style={{ marginBottom: '4px' }}>
-                        Discount: – {fmtINR(student.discount)}
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ marginBottom: '12px' }}>
-                    {payment ? (
-                      <span className={`badge ${getStatusBadge(payment.status)}`}>
-                        {payment.status === 'paid' ? '✓ Paid' : 
-                         payment.status === 'waived' ? '🔵 Waived' : 
-                         '⏳ Unpaid'}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: '12px', color: 'var(--text4)' }}>Not Generated</span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {!payment || payment.status === 'unpaid' ? (
-                      <>
-                        <button 
-                          className="btn btn-primary btn-sm" 
-                          onClick={() => onMarkPaid(student, payment)}
-                        >
-                          <I.Check /> Mark Paid
-                        </button>
-                        <button 
-                          className="btn btn-wa btn-sm" 
-                          onClick={() => onSendReminder(student)}
-                        >
-                          <I.WA /> Reminder
-                        </button>
-                        <button 
-                          className="btn btn-amber btn-sm" 
-                          onClick={() => onWaiveFee(student, payment)}
-                        >
-                          <I.Waive /> Waive
-                        </button>
-                      </>
-                    ) : (
-                      <button 
-                        className="btn btn-secondary btn-sm" 
-                        onClick={() => onSendReminder(student)}
-                      >
-                        <I.WA /> Send Message
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         )}
       </div>
