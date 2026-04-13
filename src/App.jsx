@@ -2376,46 +2376,37 @@ function FeeSyncPro({ user, authProfile }) {
 
         if (userId) {
           try {
-            // Helper to add timeout to individual queries (6 sec per query - enough time for network)
-            const withTimeout = (promise, ms = 6000) =>
-              Promise.race([
-                promise.catch(err => {
-                  console.warn('Query error:', err?.message);
-                  return null;  // Return null on error, not throw
-                }),
-                new Promise((_, reject) =>
-                  setTimeout(() => reject(new Error('Query timeout')), ms)
-                ),
-              ]).catch(err => {
-                console.warn('Query failed:', err?.message);
-                return null;
-              });
-
-            // Use allSettled so all queries run in parallel; failures don't block the others
+            // Load all data in parallel without artificial timeouts
+            // Use allSettled so failures don't block other queries
             const results = await Promise.allSettled([
-              withTimeout(fetchBatches(userId)),
-              withTimeout(fetchStudents(userId)),
-              withTimeout(fetchPayments(userId)),
-              withTimeout(fetchProfile(userId)),
-              withTimeout(fetchSettings(userId)),
+              fetchBatches(userId),
+              fetchStudents(userId),
+              fetchPayments(userId),
+              fetchProfile(userId),
+              fetchSettings(userId),
             ]);
 
-            // Extract values with fallbacks
             supabaseBatches = results[0]?.value || [];
             supabaseStudents = results[1]?.value || [];
             supabasePayments = results[2]?.value || [];
             supabaseProfile = results[3]?.value || null;
             supabaseSettings = results[4]?.value || null;
 
-            // Log successful loads
             const loadedCount = [supabaseBatches, supabaseStudents, supabasePayments].filter(x => x?.length > 0).length;
             if (loadedCount > 0) {
-              console.log(`Supabase data loaded: ${supabaseBatches.length} batches, ${supabaseStudents.length} students, ${supabasePayments.length} payments`);
+              console.log(`✓ Supabase data loaded: ${supabaseBatches?.length || 0} batches, ${supabaseStudents?.length || 0} students, ${supabasePayments?.length || 0} payments`);
             } else {
-              console.warn('No Supabase data loaded. Using local data.');
+              // Log which queries failed
+              results.forEach((r, i) => {
+                if (r.status === 'rejected') {
+                  const names = ['batches', 'students', 'payments', 'profile', 'settings'];
+                  console.warn(`${names[i]} query failed:`, r.reason?.message || r.reason);
+                }
+              });
+              console.warn('Using local/cached data.');
             }
           } catch (supabaseLoadError) {
-            console.warn("Supabase data load failed, falling back to local data:", supabaseLoadError?.message);
+            console.warn("Unexpected error loading data:", supabaseLoadError?.message);
           }
         }
 
