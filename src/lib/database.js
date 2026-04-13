@@ -121,17 +121,22 @@ export async function getUserId() {
 export async function fetchBatches(userId) {
   if (!userId) return [];
   const uuid = toUuid(userId);
-  const { data, error } = await supabase
-    .from('batches')
-    .select('*')
-    .eq('user_id', uuid)
-    .order('created_at', { ascending: true });
-  
-  if (error) {
-    console.error('Error fetching batches:', error);
+  try {
+    const { data, error } = await supabase
+      .from('batches')
+      .select('*')
+      .eq('user_id', uuid)
+      .order('created_at', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching batches:', error?.message || error);
+      return [];
+    }
+    return (data || []).map(mapBatchFromDb);
+  } catch (err) {
+    console.error('Batches fetch exception:', err?.message);
     return [];
   }
-  return (data || []).map(mapBatchFromDb);
 }
 
 export async function createBatch(userId, batch) {
@@ -179,17 +184,22 @@ export async function deleteBatch(userId, batchId) {
 export async function fetchStudents(userId) {
   if (!userId) return [];
   const uuid = toUuid(userId);
-  const { data, error } = await supabase
-    .from('students')
-    .select('*')
-    .eq('user_id', uuid)
-    .order('created_at', { ascending: true });
-  
-  if (error) {
-    console.error('Error fetching students:', error);
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('user_id', uuid)
+      .order('created_at', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching students:', error?.message || error);
+      return [];
+    }
+    return (data || []).map(mapStudentFromDb);
+  } catch (err) {
+    console.error('Students fetch exception:', err?.message);
     return [];
   }
-  return (data || []).map(mapStudentFromDb);
 }
 
 export async function createStudent(userId, student) {
@@ -237,17 +247,23 @@ export async function deleteStudent(userId, studentId) {
 export async function fetchPayments(userId) {
   if (!userId) return [];
   const uuid = toUuid(userId);
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('user_id', uuid)
-    .order('created_at', { ascending: true });
-  
-  if (error) {
-    console.error('Error fetching payments:', error);
+  try {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('user_id', uuid)
+      .order('created_at', { ascending: false })
+      .limit(2000);  // Limit to prevent massive data transfers
+    
+    if (error) {
+      console.error('Error fetching payments:', error?.message || error);
+      return [];
+    }
+    return (data || []).map(mapPaymentFromDb);
+  } catch (err) {
+    console.error('Payments fetch exception:', err?.message);
     return [];
   }
-  return (data || []).map(mapPaymentFromDb);
 }
 
 export async function createPayment(userId, payment) {
@@ -392,16 +408,21 @@ export async function deleteInstallmentsByPaymentId(userId, paymentId) {
 export async function fetchProfile(userId) {
   if (!userId) return null;
   const uuid = toUuid(userId);
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', uuid)
-    .single();
-  
-  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-    console.error('Error fetching profile:', error);
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', uuid)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.warn('Profile fetch error:', error?.message || error);
+    }
+    return mapProfileFromDb(data || null);
+  } catch (err) {
+    console.warn('Profile fetch exception:', err?.message);
+    return null;
   }
-  return mapProfileFromDb(data || null);
 }
 
 export async function saveProfile(userId, profile) {
@@ -437,16 +458,21 @@ export async function saveProfile(userId, profile) {
 export async function fetchSettings(userId) {
   if (!userId) return null;
   const uuid = toUuid(userId);
-  const { data, error } = await supabase
-    .from('settings')
-    .select('*')
-    .eq('user_id', uuid)
-    .single();
-  
-  if (error && error.code !== 'PGRST116') {
-    console.error('Error fetching settings:', error);
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('*')
+      .eq('user_id', uuid)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.warn('Settings fetch error:', error?.message || error);
+    }
+    return data || null;
+  } catch (err) {
+    console.warn('Settings fetch exception:', err?.message);
+    return null;
   }
-  return data || null;
 }
 
 export async function saveSettings(userId, settings) {

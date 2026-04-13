@@ -2376,16 +2376,22 @@ function FeeSyncPro({ user, authProfile }) {
 
         if (userId) {
           try {
-            // Helper to add timeout to individual queries (3 sec per query, not global)
-            const withTimeout = (promise, ms = 3000) =>
+            // Helper to add timeout to individual queries (6 sec per query - enough time for network)
+            const withTimeout = (promise, ms = 6000) =>
               Promise.race([
-                promise,
+                promise.catch(err => {
+                  console.warn('Query error:', err?.message);
+                  return null;  // Return null on error, not throw
+                }),
                 new Promise((_, reject) =>
                   setTimeout(() => reject(new Error('Query timeout')), ms)
                 ),
-              ]);
+              ]).catch(err => {
+                console.warn('Query failed:', err?.message);
+                return null;
+              });
 
-            // Use allSettled so slow/failed queries don't block the entire load
+            // Use allSettled so all queries run in parallel; failures don't block the others
             const results = await Promise.allSettled([
               withTimeout(fetchBatches(userId)),
               withTimeout(fetchStudents(userId)),
@@ -2395,21 +2401,21 @@ function FeeSyncPro({ user, authProfile }) {
             ]);
 
             // Extract values with fallbacks
-            supabaseBatches = results[0]?.status === 'fulfilled' ? (results[0].value || []) : [];
-            supabaseStudents = results[1]?.status === 'fulfilled' ? (results[1].value || []) : [];
-            supabasePayments = results[2]?.status === 'fulfilled' ? (results[2].value || []) : [];
-            supabaseProfile = results[3]?.status === 'fulfilled' ? results[3].value : null;
-            supabaseSettings = results[4]?.status === 'fulfilled' ? results[4].value : null;
+            supabaseBatches = results[0]?.value || [];
+            supabaseStudents = results[1]?.value || [];
+            supabasePayments = results[2]?.value || [];
+            supabaseProfile = results[3]?.value || null;
+            supabaseSettings = results[4]?.value || null;
 
-            // Log which queries failed (non-blocking logging)
-            if (results.some(r => r.status === 'rejected')) {
-              const failedQueries = results
-                .map((r, i) => i === 0 ? 'batches' : i === 1 ? 'students' : i === 2 ? 'payments' : i === 3 ? 'profile' : 'settings')
-                .filter((_, i) => results[i]?.status === 'rejected');
-              console.warn(`Supabase queries timed out or failed: ${failedQueries.join(', ')}. Using local data.`);
+            // Log successful loads
+            const loadedCount = [supabaseBatches, supabaseStudents, supabasePayments].filter(x => x?.length > 0).length;
+            if (loadedCount > 0) {
+              console.log(`Supabase data loaded: ${supabaseBatches.length} batches, ${supabaseStudents.length} students, ${supabasePayments.length} payments`);
+            } else {
+              console.warn('No Supabase data loaded. Using local data.');
             }
           } catch (supabaseLoadError) {
-            console.warn("Supabase data load failed, falling back to local data:", supabaseLoadError);
+            console.warn("Supabase data load failed, falling back to local data:", supabaseLoadError?.message);
           }
         }
 
