@@ -2681,50 +2681,72 @@ function FeeSyncPro({ user, authProfile }) {
     }
     
     if (!isEdit) {
-      // New student - create first payment with their due date preference or custom date
+      // New student - create fees for current month + next 3 months
       const b = batches.find(b => b.id === studentToSave.batchId);
       if (b) {
         const base = b.fee - (studentToSave.discount || 0);
         const total = base + Math.round(base * b.gstRate / 100);
         
-        // Determine due date based on mode
-        let dueDate;
-        if (studentToSave.dueDateMode === 'custom' && studentToSave.customDueDate) {
-          // Use custom date directly
-          dueDate = studentToSave.customDueDate;
-        } else {
-          // Calculate from preset preference
-          dueDate = calculateDueDateFromPreference(
-            studentToSave.dueDatePreference || 'lastDay',
-            new Date()
-          );
-        }
-        
-        // Create payment with calculated/custom due date
-        let newPayment = { 
-          id: uid(), 
-          studentId: studentToSave.id, 
-          month: curMonth, 
-          status: "unpaid", 
-          amount: total, 
-          lateFee: 0, 
-          notes: "", 
-          reminders: [],
-          dueDate: dueDate
+        // Helper: Generate month keys for current month + next N months
+        const getNextMonths = (monthsCount = 4) => {
+          const months = [];
+          for (let i = 0; i < monthsCount; i++) {
+            const d = new Date();
+            d.setMonth(d.getMonth() + i);
+            months.push(monthKey(d));
+          }
+          return months;
         };
         
-        // Apply reminders based on the due date
-        newPayment = applyAutoPaymentSetup(newPayment, {
-          autoDueDate: false, // Don't recalculate, we already set it
-          autoReminders: true, // Create WhatsApp reminders
+        const monthsToGenerate = getNextMonths(4); // Current + next 3 months
+        const newPayments = [];
+        
+        // Create payments for each month
+        monthsToGenerate.forEach((m) => {
+          // Determine due date based on mode
+          let dueDate;
+          if (studentToSave.dueDateMode === 'custom' && studentToSave.customDueDate) {
+            // Use custom date directly for all months
+            dueDate = studentToSave.customDueDate;
+          } else {
+            // Calculate from preset preference for this month
+            const monthDate = new Date(m + "-01"); // Parse month string
+            dueDate = calculateDueDateFromPreference(
+              studentToSave.dueDatePreference || 'lastDay',
+              monthDate
+            );
+          }
+          
+          // Create payment with calculated/custom due date
+          let newPayment = { 
+            id: uid(), 
+            studentId: studentToSave.id, 
+            month: m, 
+            status: "unpaid", 
+            amount: total, 
+            lateFee: 0, 
+            notes: "", 
+            reminders: [],
+            dueDate: dueDate
+          };
+          
+          // Apply reminders based on the due date
+          newPayment = applyAutoPaymentSetup(newPayment, {
+            autoDueDate: false, // Don't recalculate, we already set it
+            autoReminders: true, // Create WhatsApp reminders
+          });
+          
+          newPayments.push(newPayment);
         });
         
-        const np = [...payments, newPayment];
+        const np = [...payments, ...newPayments];
         setPayments(np); await dbSet(KEYS.payments, np);
         
-        // Also save payment to Supabase if user is logged in
+        // Also save payments to Supabase if user is logged in
         if (user?.id) {
-          await createPayment(user.id, newPayment).catch(console.error);
+          for (const p of newPayments) {
+            await createPayment(user.id, p).catch(console.error);
+          }
         }
       }
     } else {
@@ -2746,7 +2768,7 @@ function FeeSyncPro({ user, authProfile }) {
         }
       }
     }
-    toast(isEdit ? "Student updated!" : "✨ Student added with auto due date & reminders!", { icon: "✅" });
+    toast(isEdit ? "Student updated!" : "✨ Student added with 4 months of fees!", { icon: "✅" });
   };
 
   const deleteStudent = async (student) => {
