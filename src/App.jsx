@@ -2376,48 +2376,41 @@ function FeeSyncPro({ user, authProfile }) {
 
         if (userId) {
           try {
-            // Load all data in parallel, with individual error handlers
-            // Don't use artificial timeouts - let Supabase handle its own timing
+            // Load data with guaranteed timeout (app WILL show dashboard in max 8 seconds)
             console.log('Loading Supabase data for user:', userId);
             
-            const batchesResult = await fetchBatches(userId).catch(e => {
-              console.warn('Batches load failed:', e?.message);
-              return [];
-            });
-            
-            const studentsResult = await fetchStudents(userId).catch(e => {
-              console.warn('Students load failed:', e?.message);
-              return [];
-            });
-            
-            const paymentsResult = await fetchPayments(userId).catch(e => {
-              console.warn('Payments load failed:', e?.message);
-              return [];
-            });
-            
-            const profileResult = await fetchProfile(userId).catch(e => {
-              console.warn('Profile load failed:', e?.message);
-              return null;
-            });
-            
-            const settingsResult = await fetchSettings(userId).catch(e => {
-              console.warn('Settings load failed:', e?.message);
-              return null;
-            });
+            // Create a timeout promise that resolves with null after 8 seconds
+            const timeout = (promise, ms = 8000) => 
+              Promise.race([
+                promise.catch(() => null),
+                new Promise(resolve => setTimeout(() => {
+                  console.warn(`Query timed out after ${ms}ms, using local data`);
+                  resolve(null);
+                }, ms))
+              ]);
 
-            supabaseBatches = batchesResult || [];
-            supabaseStudents = studentsResult || [];
-            supabasePayments = paymentsResult || [];
-            supabaseProfile = profileResult || null;
-            supabaseSettings = settingsResult || null;
+            // Load all queries in parallel with 8-second max wait
+            const [batches, students, payments, profile, settings] = await Promise.all([
+              timeout(fetchBatches(userId)),
+              timeout(fetchStudents(userId)),
+              timeout(fetchPayments(userId)),
+              timeout(fetchProfile(userId)),
+              timeout(fetchSettings(userId)),
+            ]);
+
+            supabaseBatches = batches || [];
+            supabaseStudents = students || [];
+            supabasePayments = payments || [];
+            supabaseProfile = profile || null;
+            supabaseSettings = settings || null;
 
             if (supabaseBatches.length > 0 || supabaseStudents.length > 0 || supabasePayments.length > 0) {
               console.log(`✓ Loaded from Supabase: ${supabaseBatches.length} batches, ${supabaseStudents.length} students, ${supabasePayments.length} payments`);
             } else {
-              console.log('No data in Supabase or all queries failed. Will use local data.');
+              console.log('No data from Supabase. Using local/cached data.');
             }
           } catch (supabaseLoadError) {
-            console.warn("Unexpected error in data loading:", supabaseLoadError?.message);
+            console.warn("Data loading error (using local data):", supabaseLoadError?.message);
           }
         }
 
